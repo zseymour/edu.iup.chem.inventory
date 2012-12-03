@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<configuration>
+  <!-- Configure the database connection here -->
+  <jdbc>
+    <driver>com.mysql.jdbc.Driver</driver>
+    <url>jdbc:mysql://localhost:3306/inventory</url>
+    <user>root</user>
+    <password>University</password>
+    
+    <!-- You can also pass user/password and other JDBC properties in the optional properties tag: -->
+    <properties>
+      <property><key>user</key><value>root</value></property>
+      <property><key>password</key><value>University</value></property>
+    </properties>
+  </jdbc>
+
+  <generator>
+    <database>
+      <!-- The database dialect from jooq-meta. Available dialects are
+           named org.util.[database].[database]Database. Known values are:
+
+           org.jooq.util.ase.ASEDatabase (to be used with Sybase ASE)
+           org.jooq.util.cubrid.CUBRIDDatabase
+           org.jooq.util.db2.DB2Database
+           org.jooq.util.derby.DerbyDatabase
+           org.jooq.util.h2.H2Database
+           org.jooq.util.hsqldb.HSQLDBDatabase
+           org.jooq.util.ingres.IngresDatabase
+           org.jooq.util.mysql.MySQLDatabase
+           org.jooq.util.oracle.OracleDatabase
+           org.jooq.util.postgres.PostgresDatabase
+           org.jooq.util.sqlite.SQLiteDatabaes
+           org.jooq.util.sqlserver.SQLServerDatabase
+           org.jooq.util.sybase.SybaseDatabase (to be used with Sybase SQL Anywhere)
+
+           You can also provide your own org.jooq.util.Database implementation
+           here, if your database is currently not supported or if you wish to
+           read the database schema from a file, such as a Hibernate .hbm.xml file -->
+      <name>org.jooq.util.mysql.MySQLDatabase</name>
+
+      <!-- All elements that are generated from your schema (several Java
+           regular expressions, separated by comma) Watch out for
+           case-sensitivity. Depending on your database, this might be
+           important! You can create case-insensitive regular expressions
+           using this syntax: (?i:expr)A comma-separated list of regular
+           expressions -->
+      <includes>.*</includes>
+
+      <!-- All elements that are excluded from your schema (several Java
+           regular expressions, separated by comma). Excludes match before
+           includes -->
+      <excludes></excludes>
+
+      <!-- The schema that is used locally as a source for meta information.
+           This could be your development schema or the production schema, etc
+           This cannot be combined with the schemata element.
+
+           If left empty, jOOQ will generate all available schemata. See the
+           manual's next section to learn how to generate several schemata -->
+      <inputSchema></inputSchema>
+    </database>
+
+	<generate>
+		<!-- Generation flags: See advanced configuration properties -->
+		<!-- Primary key / foreign key relations should be generated and used. 
+			This is a prerequisite for various advanced features. Defaults to false -->
+		<relations>true</relations>
+
+		<!-- Generate navigation methods to navigate foreign key relationships 
+			directly from Record classes. This is only relevant if relations is set to 
+			true, too. Defaults to true -->
+		<navigationMethods>true</navigationMethods>
+
+		<!-- Generate deprecated code for backwards compatibility Defaults to true -->
+		<deprecated>true</deprecated>
+
+		<!-- Generate instance fields in your tables, as opposed to static fields. 
+			This simplifies aliasing. Defaults to true -->
+		<instanceFields>true</instanceFields>
+
+		<!-- Generate the javax.annotation.Generated annotation to indicate jOOQ 
+			version used for source code. Defaults to true -->
+		<generatedAnnotation>true</generatedAnnotation>
+
+		<!-- Generate jOOQ Record classes for type-safe querying. You can turn 
+			this off, if you don't need "active records" for CRUD Defaults to true -->
+		<records>true</records>
+
+		<!-- Generate POJOs in addition to Record classes for usage of the ResultQuery.fetchInto(Class) 
+			API Defaults to false -->
+		<pojos>false</pojos>
+
+		<!-- Generate interfaces that will be implemented by records and/or pojos. 
+			You can also use these interfaces in Record.into(Class<?>) and similar methods, 
+			to let jOOQ return proxy objects for them. Defaults to false -->
+		<interfaces>false</interfaces>
+
+		<!-- Generate DAOs in addition to POJO classes Defaults to false -->
+		<daos>false</daos>
+
+		<!-- Annotate POJOs and Records with JPA annotations for increased compatibility 
+			and better integration with JPA/Hibernate, etc Defaults to false -->
+		<jpaAnnotations>false</jpaAnnotations>
+
+		<!-- Annotate POJOs and Records with JSR-303 validation annotations Defaults 
+			to false -->
+		<validationAnnotations>false</validationAnnotations>
+	</generate>
+
+    <target>
+      <!-- The destination package of your generated classes (within the
+           destination directory) -->
+      <packageName>edu.iup.chem.inventory.db</packageName>
+
+      <!-- The destination directory of your generated classes -->
+      <directory>C:\Users\Zach\workspace\ChemInventory\src</directory>
+    </target>
+  </generator>
+</configuration>

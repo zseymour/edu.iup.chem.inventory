@@ -1,0 +1,4 @@
+com.jolbox.bonecp
+com.jolbox.bonecp.hooks
+com.jolbox.bonecp.proxy
+jsr166y

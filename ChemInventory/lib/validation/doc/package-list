@@ -1,0 +1,6 @@
+org.netbeans.validation.api
+org.netbeans.validation.api.builtin.indexvalidation
+org.netbeans.validation.api.builtin.stringvalidation
+org.netbeans.validation.api.conversion
+org.netbeans.validation.api.ui
+org.netbeans.validation.api.ui.swing
