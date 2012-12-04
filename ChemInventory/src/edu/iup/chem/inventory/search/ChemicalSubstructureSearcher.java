@@ -1,10 +1,14 @@
 package edu.iup.chem.inventory.search;
 
+import java.util.BitSet;
+
 import org.apache.log4j.Logger;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.Molecule;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
+import org.openscience.cdk.fingerprint.ExtendedFingerprinter;
+import org.openscience.cdk.fingerprint.FingerprinterTool;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.UniversalIsomorphismTester;
 import org.openscience.cdk.smiles.SmilesGenerator;
@@ -42,6 +46,10 @@ public class ChemicalSubstructureSearcher {
 		substructure = getMoleculeFromSMILES(SMILES);
 	}
 
+	public BitSet getFingerprint(final IAtomContainer mol) throws CDKException {
+		return new ExtendedFingerprinter().getFingerprint(mol);
+	}
+
 	public IAtomContainer getSubstructure() {
 		return substructure;
 	}
@@ -54,7 +62,9 @@ public class ChemicalSubstructureSearcher {
 		final IAtomContainer mol = getMoleculeFromSMILES(SMILES);
 
 		try {
-			return UniversalIsomorphismTester.isSubgraph(mol, substructure);
+			return UniversalIsomorphismTester.isSubgraph(mol, substructure)
+					&& FingerprinterTool.isSubset(getFingerprint(mol),
+							getFingerprint(substructure));
 		} catch (final CDKException e) {
 			log.debug("Error checking subgraph", e.getCause());
 			return false;
