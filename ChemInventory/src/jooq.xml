@@ -4,13 +4,13 @@
   <jdbc>
     <driver>com.mysql.jdbc.Driver</driver>
     <url>jdbc:mysql://localhost:3306/inventory</url>
-    <user>root</user>
-    <password>University</password>
+    <user></user>
+    <password></password>
     
     <!-- You can also pass user/password and other JDBC properties in the optional properties tag: -->
     <properties>
-      <property><key>user</key><value>root</value></property>
-      <property><key>password</key><value>University</value></property>
+      <property><key>user</key><value></value></property>
+      <property><key>password</key><value></value></property>
     </properties>
   </jdbc>
 
