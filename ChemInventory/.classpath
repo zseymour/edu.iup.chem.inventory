@@ -5,7 +5,6 @@
 	<classpathentry kind="lib" path="lib/swingx/demo/lib/AnimatedTransitions.jar"/>
 	<classpathentry kind="lib" path="lib/swingx/demo/lib/AppFramework.jar"/>
 	<classpathentry kind="lib" path="lib/swingx/demo/lib/swing-worker.jar"/>
-	<classpathentry kind="lib" path="lib/swingx/demo/lib/swingx.jar" sourcepath="lib/swingx/swingx-all-1.6.4-sources.jar"/>
 	<classpathentry kind="lib" path="lib/swingx/demo/lib/TimingFramework.jar"/>
 	<classpathentry kind="lib" path="lib/jscience/bin/jscience.jar" sourcepath="lib/jscience/src/src">
 		<attributes>
