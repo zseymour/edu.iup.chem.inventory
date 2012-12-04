@@ -32,8 +32,8 @@ public class ConnectionPool {
 			pool = new ComboPooledDataSource();
 			pool.setDriverClass("com.mysql.jdbc.Driver");
 			pool.setJdbcUrl("jdbc:mysql://sage.nsm.iup.edu:3306/inventory?zeroDateTimeBehavior=round");
-			pool.setUser();
-			pool.setPassword();
+			pool.setUser("app");
+			pool.setPassword("inventory@pp");
 
 			// the settings below are optional -- c3p0 can work with defaults
 			pool.setMinPoolSize(5);
