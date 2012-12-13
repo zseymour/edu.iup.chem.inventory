@@ -41,6 +41,7 @@ import edu.iup.chem.inventory.db.inventory.tables.records.RoomRecord;
 import edu.iup.chem.inventory.db.inventory.tables.records.UserRecord;
 import edu.iup.chem.inventory.search.ChemicalSubstructureSearcher;
 import edu.iup.chem.inventory.wizard.InventoryWizardListener;
+import edu.iup.chem.inventory.wizard.NewBottlePageFactory;
 import edu.iup.chem.inventory.wizard.NewChemicalPageFactory;
 import edu.iup.chem.inventory.wizard.NewUserPageFactory;
 
@@ -53,7 +54,9 @@ public class MainFrame extends JFrame {
 				case "NEW_CHEMICAL":
 					showNewChemicalWizard();
 					break;
-
+				case "NEW_BOTTLE":
+					showNewBottleWizard();
+					break;
 				case "DELETE":
 					LOG.debug("Deleting selected rows.");
 					deleteRows();
@@ -74,6 +77,25 @@ public class MainFrame extends JFrame {
 		private void deleteRows() {
 			search.deleteRows();
 
+		}
+
+		private void showNewBottleWizard() {
+			final InventoryWizardDialog iwd = new InventoryWizardDialog(
+					new NewBottlePageFactory());
+			iwd.addWizardListener(new InventoryWizardListener(iwd) {
+
+				@Override
+				public void onFinished(final List<WizardPage> path,
+						final WizardSettings settings) {
+					// TODO Auto-generated method stub
+
+				}
+
+			});
+
+			iwd.pack();
+			iwd.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+			iwd.setVisible(true);
 		}
 
 		private void showNewChemicalWizard() {
@@ -263,6 +285,9 @@ public class MainFrame extends JFrame {
 
 	private void buildToolBar(final JToolBar toolBar) {
 		JButton button = newMenuButton("Add New Chemical", "NEW_CHEMICAL");
+		toolBar.add(button);
+
+		button = newMenuButton("Add New Bottle", "NEW_BOTTLE");
 		toolBar.add(button);
 
 		button = newMenuButton("Delete Selected Item(s)", "DELETE");
