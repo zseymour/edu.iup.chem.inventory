@@ -197,7 +197,7 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 			LOG.error("SQL Error while fetching all chemicals.", e);
 		}
 
-		return null;
+		return new ArrayList<>();
 	}
 
 	@Override
@@ -213,5 +213,15 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 		}
 
 		return null;
+	}
+
+	public List<String> getListOfCAS() {
+		final List<ChemicalRecord> records = getAll();
+		final List<String> casList = new ArrayList<>();
+		for (final ChemicalRecord rec : records) {
+			casList.add(rec.getCas());
+		}
+
+		return casList;
 	}
 }
