@@ -72,8 +72,10 @@ public class VerifyBottleWizardPage extends WizardPage {
 	@SuppressWarnings("unchecked")
 	// <editor-fold defaultstate="collapsed"
 	// <editor-fold defaultstate="collapsed"
+	// <editor-fold defaultstate="collapsed"
 	// desc="Generated Code">//GEN-BEGIN:initComponents
 	private void initComponents() {
+
 		final Calendar cal = Calendar.getInstance();
 		jLabel1 = new javax.swing.JLabel();
 		jLabel2 = new javax.swing.JLabel();
@@ -147,42 +149,64 @@ public class VerifyBottleWizardPage extends WizardPage {
 				.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
 				.addGroup(
 						layout.createSequentialGroup()
-								.addContainerGap()
-								.addGroup(
-										layout.createParallelGroup(
-												javax.swing.GroupLayout.Alignment.LEADING)
-												.addComponent(jLabel1)
-												.addComponent(
-														room,
-														javax.swing.GroupLayout.PREFERRED_SIZE,
-														javax.swing.GroupLayout.DEFAULT_SIZE,
-														javax.swing.GroupLayout.PREFERRED_SIZE))
-								.addGap(18, 18, 18)
 								.addGroup(
 										layout.createParallelGroup(
 												javax.swing.GroupLayout.Alignment.LEADING)
 												.addGroup(
 														layout.createSequentialGroup()
+																.addGap(0,
+																		0,
+																		Short.MAX_VALUE)
+																.addComponent(
+																		jLabel8)
+																.addPreferredGap(
+																		javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+																.addComponent(
+																		bottle,
+																		javax.swing.GroupLayout.PREFERRED_SIZE,
+																		159,
+																		javax.swing.GroupLayout.PREFERRED_SIZE))
+												.addGroup(
+														layout.createSequentialGroup()
+																.addContainerGap()
 																.addGroup(
 																		layout.createParallelGroup(
 																				javax.swing.GroupLayout.Alignment.LEADING,
 																				false)
 																				.addComponent(
-																						jLabel2)
+																						arrival)
+																				.addGroup(
+																						layout.createSequentialGroup()
+																								.addGroup(
+																										layout.createParallelGroup(
+																												javax.swing.GroupLayout.Alignment.LEADING)
+																												.addComponent(
+																														jLabel1)
+																												.addComponent(
+																														room,
+																														javax.swing.GroupLayout.PREFERRED_SIZE,
+																														javax.swing.GroupLayout.DEFAULT_SIZE,
+																														javax.swing.GroupLayout.PREFERRED_SIZE))
+																								.addGap(18,
+																										18,
+																										18)
+																								.addGroup(
+																										layout.createParallelGroup(
+																												javax.swing.GroupLayout.Alignment.LEADING)
+																												.addComponent(
+																														jLabel2)
+																												.addComponent(
+																														shelf,
+																														javax.swing.GroupLayout.PREFERRED_SIZE,
+																														57,
+																														javax.swing.GroupLayout.PREFERRED_SIZE)))
 																				.addComponent(
-																						jLabel6,
-																						javax.swing.GroupLayout.DEFAULT_SIZE,
-																						javax.swing.GroupLayout.DEFAULT_SIZE,
-																						Short.MAX_VALUE)
-																				.addComponent(
-																						shelf))
+																						jLabel6))
 																.addGap(18, 18,
 																		18)
 																.addGroup(
 																		layout.createParallelGroup(
 																				javax.swing.GroupLayout.Alignment.LEADING)
-																				.addComponent(
-																						jLabel7)
 																				.addGroup(
 																						layout.createSequentialGroup()
 																								.addGroup(
@@ -216,35 +240,24 @@ public class VerifyBottleWizardPage extends WizardPage {
 																														units,
 																														javax.swing.GroupLayout.PREFERRED_SIZE,
 																														javax.swing.GroupLayout.DEFAULT_SIZE,
-																														javax.swing.GroupLayout.PREFERRED_SIZE)))))
-												.addGroup(
-														layout.createParallelGroup(
-																javax.swing.GroupLayout.Alignment.TRAILING,
-																false)
-																.addGroup(
-																		layout.createSequentialGroup()
-																				.addComponent(
-																						jLabel8)
-																				.addPreferredGap(
-																						javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-																				.addComponent(
-																						bottle))
-																.addGroup(
-																		javax.swing.GroupLayout.Alignment.LEADING,
-																		layout.createSequentialGroup()
-																				.addComponent(
-																						arrival,
-																						javax.swing.GroupLayout.PREFERRED_SIZE,
-																						57,
-																						javax.swing.GroupLayout.PREFERRED_SIZE)
-																				.addGap(18,
-																						18,
-																						18)
-																				.addComponent(
-																						expiration,
-																						javax.swing.GroupLayout.PREFERRED_SIZE,
-																						78,
-																						javax.swing.GroupLayout.PREFERRED_SIZE))))
+																														javax.swing.GroupLayout.PREFERRED_SIZE)))
+																				.addGroup(
+																						layout.createSequentialGroup()
+																								.addGap(10,
+																										10,
+																										10)
+																								.addGroup(
+																										layout.createParallelGroup(
+																												javax.swing.GroupLayout.Alignment.LEADING)
+																												.addGroup(
+																														layout.createSequentialGroup()
+																																.addComponent(
+																																		jLabel7)
+																																.addGap(0,
+																																		0,
+																																		Short.MAX_VALUE))
+																												.addComponent(
+																														expiration))))))
 								.addGap(37, 37, 37)));
 		layout.setVerticalGroup(layout
 				.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -299,14 +312,14 @@ public class VerifyBottleWizardPage extends WizardPage {
 										javax.swing.LayoutStyle.ComponentPlacement.RELATED)
 								.addGroup(
 										layout.createParallelGroup(
-												javax.swing.GroupLayout.Alignment.BASELINE)
+												javax.swing.GroupLayout.Alignment.LEADING)
 												.addComponent(
-														arrival,
+														expiration,
 														javax.swing.GroupLayout.PREFERRED_SIZE,
 														javax.swing.GroupLayout.DEFAULT_SIZE,
 														javax.swing.GroupLayout.PREFERRED_SIZE)
 												.addComponent(
-														expiration,
+														arrival,
 														javax.swing.GroupLayout.PREFERRED_SIZE,
 														javax.swing.GroupLayout.DEFAULT_SIZE,
 														javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -314,12 +327,12 @@ public class VerifyBottleWizardPage extends WizardPage {
 								.addGroup(
 										layout.createParallelGroup(
 												javax.swing.GroupLayout.Alignment.BASELINE)
-												.addComponent(jLabel8)
 												.addComponent(
 														bottle,
 														javax.swing.GroupLayout.PREFERRED_SIZE,
 														javax.swing.GroupLayout.DEFAULT_SIZE,
-														javax.swing.GroupLayout.PREFERRED_SIZE))
+														javax.swing.GroupLayout.PREFERRED_SIZE)
+												.addComponent(jLabel8))
 								.addContainerGap(153, Short.MAX_VALUE)));
 	}// </editor-fold>//GEN-END:initComponents
 }

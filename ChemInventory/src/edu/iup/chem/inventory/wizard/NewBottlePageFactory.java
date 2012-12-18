@@ -1,6 +1,7 @@
 package edu.iup.chem.inventory.wizard;
 
 import java.awt.Dimension;
+import java.util.List;
 
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -27,7 +28,7 @@ public class NewBottlePageFactory extends InventoryPageFactory {
 					{
 						log.debug("Settings: " + settings);
 						final ListComboBoxModel<String> casModel = new ListComboBoxModel<>(
-								new ChemicalDao().getListOfCAS());
+								ChemicalDao.getListOfCAS());
 						final JComboBox<String> field = new JComboBox<>(
 								casModel);
 						AutoCompleteDecorator.decorate(field);
@@ -58,6 +59,16 @@ public class NewBottlePageFactory extends InventoryPageFactory {
 				};
 			case 1:
 				return new VerifyBottleWizardPage(settings);
+			case 2:
+				return new WizardPage("Complete Entry?",
+						"Press Finish to enter the new bottle.") {
+					@Override
+					public void rendering(final List<WizardPage> path,
+							final WizardSettings settings1) {
+						setFinishEnabled(true);
+						setNextEnabled(false);
+					}
+				};
 			default:
 				return getErrorPage();
 		}
