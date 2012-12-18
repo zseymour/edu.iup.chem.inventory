@@ -17,7 +17,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/chemspider/chemspider_webservices.jar" sourcepath="lib/chemspider/src"/>
-	<classpathentry kind="lib" path="lib/wizard/CJWizards-0.2.jar" sourcepath="lib/wizard/CJWizards-0.21-src.jar"/>
 	<classpathentry kind="lib" path="lib/lucene/lib/core/lucene-core-4.0.0.jar" sourcepath="lib/lucene/src/core">
 		<attributes>
 			<attribute name="javadoc_location" value="file:/C:/Users/Zach/workspace/ChemInventory/lib/lucene/lib/docs/core/"/>
