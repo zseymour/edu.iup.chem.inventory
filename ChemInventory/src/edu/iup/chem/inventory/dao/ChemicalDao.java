@@ -118,6 +118,21 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 		return new ArrayList<>();
 	}
 
+	public static List<String> getListOfCAS() {
+		List<String> casList = new ArrayList<>();
+		try (Connection conn = ConnectionPool.getConnection()) {
+			final InventoryFactory create = new InventoryFactory(conn);
+
+			casList = create.select(CHEMICAL.CAS).from(CHEMICAL)
+					.fetchInto(String.class);
+
+		} catch (final SQLException e) {
+			LOG.error("SQL Error while fetching all chemicals.", e);
+		}
+
+		return casList;
+	}
+
 	public static String getNameByCAS(final String cas) {
 		final ChemicalRecord rec = getByCas(cas);
 
@@ -213,15 +228,5 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 		}
 
 		return null;
-	}
-
-	public List<String> getListOfCAS() {
-		final List<ChemicalRecord> records = getAll();
-		final List<String> casList = new ArrayList<>();
-		for (final ChemicalRecord rec : records) {
-			casList.add(rec.getCas());
-		}
-
-		return casList;
 	}
 }
