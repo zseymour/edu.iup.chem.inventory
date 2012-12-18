@@ -9,6 +9,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +29,7 @@ import edu.iup.chem.inventory.Constants;
 import edu.iup.chem.inventory.Utils;
 import edu.iup.chem.inventory.dao.AccessDao;
 import edu.iup.chem.inventory.dao.ChemicalDao;
+import edu.iup.chem.inventory.dao.LocationDao;
 import edu.iup.chem.inventory.dao.UserDao;
 import edu.iup.chem.inventory.db.inventory.enums.ChemicalCarc;
 import edu.iup.chem.inventory.db.inventory.enums.ChemicalCold;
@@ -36,6 +38,7 @@ import edu.iup.chem.inventory.db.inventory.enums.ChemicalNfpaS;
 import edu.iup.chem.inventory.db.inventory.enums.ChemicalStorageClass;
 import edu.iup.chem.inventory.db.inventory.enums.ChemicalToxic;
 import edu.iup.chem.inventory.db.inventory.tables.records.ChemicalRecord;
+import edu.iup.chem.inventory.db.inventory.tables.records.LocationRecord;
 import edu.iup.chem.inventory.db.inventory.tables.records.RoleRecord;
 import edu.iup.chem.inventory.db.inventory.tables.records.RoomRecord;
 import edu.iup.chem.inventory.db.inventory.tables.records.UserRecord;
@@ -87,14 +90,39 @@ public class MainFrame extends JFrame {
 				@Override
 				public void onFinished(final List<WizardPage> path,
 						final WizardSettings settings) {
-					// TODO Auto-generated method stub
+					iwd.dispose();
+					if (DEBUG) {
+						log.debug("WizardSettings: " + settings);
+						return;
+					}
+
+					final ChemicalRecord rec = (ChemicalRecord) settings
+							.get("chemicalRecord");
+					final LocationRecord loc = new LocationRecord();
+					loc.setCas(rec.getCas());
+					loc.setActive((byte) 0b1);
+					loc.setAmount(Double.parseDouble((String) settings
+							.get("amount")));
+					loc.setArrival((Date) settings.get("arrival"));
+					loc.setBottleNo(Integer.parseInt((String) settings
+							.get("bottle")));
+					loc.setExpiration((Date) settings.get("expiration"));
+					loc.setInstructor((String) settings.get("instructor"));
+					loc.setPartNo(0);
+					loc.setRoom(((RoomRecord) settings.get("room")).getRoom());
+					loc.setShelf((String) settings.get("shelf"));
+					loc.setSupplier("None");
+					loc.setUnits((String) settings.get("units"));
+
+					LocationDao.store(loc);
+					search.fireChemicalsAdded();
 
 				}
 
 			});
 
 			iwd.pack();
-			iwd.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+			iwd.setModalityType(Dialog.ModalityType.APPLICATION_MODAL);
 			iwd.setVisible(true);
 		}
 
@@ -153,7 +181,7 @@ public class MainFrame extends JFrame {
 			});
 
 			iwd.pack();
-			iwd.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+			iwd.setModalityType(Dialog.ModalityType.APPLICATION_MODAL);
 			iwd.setVisible(true);
 		}
 
@@ -183,7 +211,8 @@ public class MainFrame extends JFrame {
 					rec.setRid(role);
 					rec.setRoleName(role);
 
-					final Object[] objects = (Object[]) settings.get("rooms");
+					final List<Object> objects = (List<Object>) settings
+							.get("rooms");
 					final List<RoomRecord> rooms = new ArrayList<>();
 
 					for (final Object o : objects) {
@@ -203,7 +232,7 @@ public class MainFrame extends JFrame {
 			});
 
 			iwd.pack();
-			iwd.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+			iwd.setModalityType(Dialog.ModalityType.APPLICATION_MODAL);
 			iwd.setVisible(true);
 
 		}
@@ -246,7 +275,7 @@ public class MainFrame extends JFrame {
 	 */
 	private static final long		serialVersionUID	= 987106188401169152L;
 	private static final Logger		LOG					= Logger.getLogger(MainFrame.class);
-	private static final boolean	DEBUG				= false;
+	private static final boolean	DEBUG				= true;
 
 	private JTabbedPane				pane;
 	private DataPanel				search;
