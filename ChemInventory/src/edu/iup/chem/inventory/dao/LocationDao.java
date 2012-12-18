@@ -158,10 +158,10 @@ public class LocationDao extends DataDao<LocationRecord> {
 		String bottle = null;
 		try (Connection conn = ConnectionPool.getConnection()) {
 			final InventoryFactory create = new InventoryFactory(conn);
-			bottle = create
+			bottle = ((Integer) create
 					.select(Factory.max(LOCATION.BOTTLE_NO).add(1)
-							.as("next_bottle")).from(LOCATION).fetchAny()
-					.into(String.class);
+							.as("next_bottle")).from(LOCATION)
+					.fetchOne("next_bottle")).toString();
 		} catch (final SQLException e) {
 			LOG.error("SQL Error fetching next bottle number.", e.getCause());
 		}
