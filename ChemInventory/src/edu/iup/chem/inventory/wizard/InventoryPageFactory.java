@@ -9,6 +9,17 @@ import org.ciscavate.cjwizard.WizardSettings;
 
 public abstract class InventoryPageFactory implements PageFactory {
 
+	protected static WizardPage getErrorPage() {
+		return new WizardPage("Error.",
+				"This page shouldn't really be here at all.") {
+
+			/**
+					 * 
+					 */
+			private static final long	serialVersionUID	= -7424202289691205528L;
+		};
+	}
+
 	private final Logger	log	= Logger.getLogger(InventoryPageFactory.class);
 
 	protected abstract WizardPage buildPage(int size, WizardSettings settings);
@@ -32,17 +43,6 @@ public abstract class InventoryPageFactory implements PageFactory {
 
 		log.debug("Returning page: " + page);
 		return page;
-	}
-
-	protected WizardPage getErrorPage() {
-		return new WizardPage("Error.",
-				"This page shouldn't really be here at all.") {
-
-			/**
-					 * 
-					 */
-			private static final long	serialVersionUID	= -7424202289691205528L;
-		};
 	}
 
 }
