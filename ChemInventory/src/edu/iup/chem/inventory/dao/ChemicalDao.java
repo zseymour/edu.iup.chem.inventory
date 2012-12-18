@@ -124,7 +124,7 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 			final InventoryFactory create = new InventoryFactory(conn);
 
 			casList = create.select(CHEMICAL.CAS).from(CHEMICAL)
-					.fetchInto(String.class);
+					.fetch(CHEMICAL.CAS);
 
 		} catch (final SQLException e) {
 			LOG.error("SQL Error while fetching all chemicals.", e);
