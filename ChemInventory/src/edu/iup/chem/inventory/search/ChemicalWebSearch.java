@@ -2,12 +2,15 @@ package edu.iup.chem.inventory.search;
 
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLEncoder;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -559,6 +562,55 @@ public class ChemicalWebSearch {
 
 		return null;
 
+	}
+
+	public static String getTOXNETResponse(final String query) {
+		final StringBuilder sb = new StringBuilder();
+		try {
+			URL url;
+			URLConnection urlConn;
+			DataOutputStream printout;
+			BufferedReader input;
+
+			// URL of CGI-Bin script.
+			url = new URL("http://toxgate.nlm.nih.gov/cgi-bin/sis/search/");
+			// URL connection channel.
+			urlConn = url.openConnection();
+			// Let the run-time system (RTS) know that we want input.
+			urlConn.setDoInput(true);
+			// Let the RTS know that we want to do output.
+			urlConn.setDoOutput(true);
+			// No caching, we want the real thing.
+			urlConn.setUseCaches(false);
+			// Specify the content type.
+			urlConn.setRequestProperty("Content-Type",
+					"application/x-www-form-urlencoded");
+			// Send POST output.
+			printout = new DataOutputStream(urlConn.getOutputStream());
+			final String content = String
+					.format("queryxxx=%s&database=hsdb&Stemming=1&and=1&second_search=1&gateway=1&chemsyn=1",
+							URLEncoder.encode(query, "UTF-8"));
+			printout.writeBytes(content);
+			printout.flush();
+			printout.close();
+			// Get response data.
+			input = new BufferedReader(new InputStreamReader(
+					urlConn.getInputStream()));
+			String str;
+			while (null != (str = input.readLine())) {
+				sb.append(str);
+			}
+			input.close();
+
+		}
+
+		catch (final MalformedURLException me) {
+			LOG.debug("Improperly formatted TOXNET URL", me.getCause());
+		} catch (final IOException ioe) {
+			LOG.error("Error connecting to TOXNET", ioe.getCause());
+		}
+
+		return sb.toString();
 	}
 
 	private static String getWebWiserPage(final String casNo)
