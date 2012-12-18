@@ -11,6 +11,7 @@ import org.apache.log4j.Logger;
 import org.jooq.Cursor;
 import org.jooq.Record;
 import org.jooq.exception.DataAccessException;
+import org.jooq.impl.Factory;
 
 import edu.iup.chem.inventory.ConnectionPool;
 import edu.iup.chem.inventory.Constants;
@@ -151,6 +152,20 @@ public class LocationDao extends DataDao<LocationRecord> {
 		}
 
 		return null;
+	}
+
+	public static String getNextAvailableBottle() {
+		String bottle = null;
+		try (Connection conn = ConnectionPool.getConnection()) {
+			final InventoryFactory create = new InventoryFactory(conn);
+			bottle = create
+					.select(Factory.max(LOCATION.BOTTLE_NO).add(1)
+							.as("next_bottle")).fetchAny().into(String.class);
+		} catch (final SQLException e) {
+			LOG.error("SQL Error fetching next bottle number.", e.getCause());
+		}
+
+		return bottle;
 	}
 
 	public static void store(final LocationRecord rec) {
