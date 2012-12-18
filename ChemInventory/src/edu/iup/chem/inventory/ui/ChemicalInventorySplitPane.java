@@ -68,6 +68,7 @@ public class ChemicalInventorySplitPane extends DataPanel {
 	@Override
 	public void fireChemicalsAdded() {
 		chemicalPanel.fireChemicalsAdded();
+		inventoryPanel.fireChemicalsAdded();
 
 	}
 
