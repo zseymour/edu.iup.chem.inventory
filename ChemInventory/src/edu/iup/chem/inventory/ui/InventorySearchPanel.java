@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import javax.swing.Box;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -38,16 +39,23 @@ import javax.swing.text.Document;
 
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
+import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
+import org.jdesktop.swingx.autocomplete.ComboBoxCellEditor;
+import org.jdesktop.swingx.combobox.ListComboBoxModel;
 import org.jdesktop.swingx.decorator.HighlighterFactory;
+import org.jdesktop.swingx.renderer.DefaultListRenderer;
 import org.jdesktop.swingx.renderer.DefaultTableRenderer;
 import org.jdesktop.swingx.renderer.FormatStringValue;
 import org.jdesktop.swingx.renderer.StringValue;
+import org.jdesktop.swingx.renderer.StringValues;
 import org.jdesktop.swingx.table.DatePickerCellEditor;
 import org.jdesktop.swingx.table.TableColumnExt;
 import org.openscience.cdk.Molecule;
 
 import edu.iup.chem.inventory.dao.LocationDao;
+import edu.iup.chem.inventory.dao.RoomDao;
 import edu.iup.chem.inventory.db.inventory.tables.records.LocationRecord;
+import edu.iup.chem.inventory.db.inventory.tables.records.RoomRecord;
 import edu.iup.chem.inventory.lists.celleditor.AmountCellEditor;
 import edu.iup.chem.inventory.lists.comparators.ChemicalAmountComparator;
 import edu.iup.chem.inventory.lists.tablemodels.LocationTableModel;
@@ -192,6 +200,7 @@ public class InventorySearchPanel extends DataPanel {
 
 	}
 
+	@SuppressWarnings("unchecked")
 	private TableColumnModel createColumnModel() {
 		final DefaultTableColumnModel columnModel = new DefaultTableColumnModel();
 
@@ -218,11 +227,27 @@ public class InventorySearchPanel extends DataPanel {
 		column.setCellRenderer(cellRenderer);
 		columnModel.addColumn(column);
 
+		final ListComboBoxModel<RoomRecord> roomModel = new ListComboBoxModel<>(
+				RoomDao.getAllRoomRecords());
+		final JComboBox<RoomRecord> room = new JComboBox<>(roomModel);
+		room.setRenderer(new DefaultListRenderer(new StringValue() {
+			@Override
+			public String getString(final Object value) {
+				if (value instanceof RoomRecord) {
+					return ((RoomRecord) value).getRoom();
+				}
+
+				return StringValues.TO_STRING.getString(value);
+			}
+		}));
+		AutoCompleteDecorator.decorate(room);
+		final ComboBoxCellEditor roomEditor = new ComboBoxCellEditor(room);
 		column = new TableColumnExt();
 		column.setModelIndex(LocationTableModel.ROOM_COLUMN);
 		column.setHeaderValue("Room");
 		column.setPreferredWidth(180);
 		column.setCellRenderer(cellRenderer);
+		column.setCellEditor(roomEditor);
 		columnModel.addColumn(column);
 
 		column = new TableColumnExt();
