@@ -139,6 +139,20 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 		return rec.getName();
 	}
 
+	public static SynonymRecord getNames(final String cas) {
+		try (Connection conn = ConnectionPool.getConnection()) {
+			final InventoryFactory create = new InventoryFactory(conn);
+
+			return create.select(SYNONYM.NAMES).from(SYNONYM)
+					.where(SYNONYM.CAS.eq(cas)).fetchAny()
+					.into(SynonymRecord.class);
+		} catch (final SQLException e) {
+			LOG.error("SQL Error while fetching synonyms.", e.getCause());
+		}
+
+		return null;
+	}
+
 	public static boolean isCarcinogenic(final ChemicalRecord rec) {
 		try (final Connection conn = ConnectionPool.getConnection()) {
 			final InventoryFactory create = new InventoryFactory(conn);
