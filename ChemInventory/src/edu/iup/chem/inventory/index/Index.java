@@ -33,6 +33,7 @@ public class Index {
 			final Map<String, Analyzer> map = new HashMap<>();
 
 			map.put("name", new WhitespaceAnalyzer(Version.LUCENE_40));
+			map.put("syn", new WhitespaceAnalyzer(Version.LUCENE_40));
 
 			return map;
 		}
@@ -52,6 +53,8 @@ public class Index {
 					doc.add(new StringField("cas", r.getCas(), Field.Store.YES));
 					doc.add(new StringField("name", r.getName(),
 							Field.Store.YES));
+					doc.add(new StringField("syn", r.getOtherNames(),
+							Field.Store.NO));
 
 					iwriter.addDocument(doc);
 				}
