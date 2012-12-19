@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
@@ -38,6 +40,7 @@ import com.chemspider.www.SearchStub.SimpleSearch;
 import edu.iup.chem.inventory.Constants;
 import edu.iup.chem.inventory.amount.ChemicalAmount;
 import edu.iup.chem.inventory.amount.ChemicalAmountFactory;
+import edu.iup.chem.inventory.amount.ChemicalDensity;
 import edu.iup.chem.inventory.amount.ChemicalMass;
 import edu.iup.chem.inventory.com.chemspider.www.SynonymsStub;
 import edu.iup.chem.inventory.com.chemspider.www.SynonymsStub.GetStructureSynonyms;
@@ -54,6 +57,79 @@ import edu.iup.chem.inventory.lists.comparators.ChemicalAmountComparator;
 public class ChemicalWebSearch {
 
 	private final static Logger	LOG	= Logger.getLogger(ChemicalWebSearch.class);
+
+	private static double _fetchBoilingPoint(final String baseURL)
+			throws IOException {
+		final String content = Jsoup.connect(baseURL + ":bp").get().text();
+
+		LOG.debug("TOXNET Boiling Point Response: " + content);
+
+		final Pattern p = Pattern.compile("([\\d.]+) deg");
+		final Matcher m = p.matcher(content);
+
+		while (m.find()) {
+			final String bp = m.group(1);
+			LOG.debug("Boiling point: " + bp);
+			final double boiling = Double.parseDouble(bp);
+			return boiling;
+		}
+
+		return 0;
+	}
+
+	private static ChemicalDensity _fetchDensity(final String baseURL)
+			throws IOException, NumberFormatException {
+		final String content = Jsoup.connect(baseURL + ":den").get().text();
+
+		LOG.debug("TOXNET Density Response: " + content);
+
+		final Pattern solidPattern = Pattern
+				.compile("([\\d.]+) ([A-Za-z]+/[A-Za-z ]+)");
+		final Matcher solidMatcher = solidPattern.matcher(content);
+
+		final Pattern liquidPattern = Pattern
+				.compile("Gravity: ([\\d.]+) (at|@)?");
+		final Matcher liquidMatcher = liquidPattern.matcher(content);
+
+		if (solidMatcher.find()) {
+			final String value = solidMatcher.group(1);
+			final String unit = solidMatcher.group(2);
+
+			LOG.debug("Density: " + value + " " + unit);
+
+			return (ChemicalDensity) ChemicalAmountFactory.getChemicalAmount(
+					value, unit);
+		} else if (liquidMatcher.find()) {
+			final String gravity = liquidMatcher.group(1);
+
+			LOG.debug("Specific gravity: " + gravity);
+
+			return (ChemicalDensity) ChemicalAmountFactory.getChemicalAmount(
+					gravity, "kg/m3");
+		}
+
+		throw new NumberFormatException(
+				"Density information improperly formatted");
+	}
+
+	private static Double _fetchMeltingPoint(final String baseURL)
+			throws IOException {
+		final String content = Jsoup.connect(baseURL + ":mp").get().text();
+
+		LOG.debug("TOXNET Melting Point Response: " + content);
+
+		final Pattern p = Pattern.compile("([\\d.]+) deg");
+		final Matcher m = p.matcher(content);
+
+		while (m.find()) {
+			final String mp = m.group(1);
+			LOG.debug("Melting point: " + mp);
+			final double melting = Double.parseDouble(mp);
+			return melting;
+		}
+
+		return 0.0;
+	}
 
 	/**
 	 * We store an array of LD50 amounts corresponding to the toxicity levels.
@@ -152,6 +228,31 @@ public class ChemicalWebSearch {
 		}
 	}
 
+	public static Double fetchBoilingPoint(final String cas) {
+		try {
+			return _fetchBoilingPoint(getTOXNETBaseUrl(cas));
+		} catch (final IOException e) {
+			return 0.0;
+		}
+	}
+
+	public static ChemicalDensity fetchDensity(final String cas) {
+		try {
+			return _fetchDensity(getTOXNETBaseUrl(cas));
+		} catch (final IOException | NumberFormatException e) {
+			return (ChemicalDensity) ChemicalAmountFactory.getChemicalAmount(
+					1.0, "kg/m3");
+		}
+	}
+
+	public static Double fetchMeltingPoint(final String cas) {
+		try {
+			return _fetchMeltingPoint(getTOXNETBaseUrl(cas));
+		} catch (final IOException e) {
+			return 0.0;
+		}
+	}
+
 	private static void fillCancerInformation(final ChemicalRecord r) {
 		if (ChemicalDao.isCarcinogenic(r)) {
 			r.setCarc(ChemicalCarc.Yes);
@@ -206,6 +307,41 @@ public class ChemicalWebSearch {
 			LOG.debug("Error parsing NFPA codes.");
 			return;
 		}
+	}
+
+	public static void fillHazardInformation(final ChemicalRecord r,
+			final String baseURL) throws IOException {
+		r.setNfpaF(0);
+		r.setNfpaH(0);
+		r.setNfpaR(0);
+		r.setNfpaS(ChemicalNfpaS.None);
+
+		final String content = Jsoup.connect(baseURL + ":nfpa").get().text();
+		LOG.debug("TOXNET Hazard Response: " + content);
+		final Pattern p = Pattern.compile("([A-Za-z]+): ([0-9])\\.");
+		final Matcher m = p.matcher(content);
+		while (m.find()) {
+			final String field = m.group(1);
+			final String value = m.group(2);
+			final Integer intValue = Integer.parseInt(value);
+			LOG.debug(field + ": " + value);
+
+			switch (field) {
+				case "Health":
+					r.setNfpaH(intValue);
+					break;
+				case "Flammability":
+					r.setNfpaF(intValue);
+					break;
+				case "Instability":
+					r.setNfpaR(intValue);
+					break;
+				default:
+					break;
+			}
+
+		}
+
 	}
 
 	private static void fillStorageClass(final ChemicalRecord r) {
@@ -337,10 +473,38 @@ public class ChemicalWebSearch {
 			}
 
 		} catch (final IOException e) {
-			// TODO Auto-generated catch block
 			LOG.debug("Error connecting to WebWISER.");
 		} catch (final NumberFormatException e) {
 			return;
+		}
+
+	}
+
+	public static void fillStorageTypes(final ChemicalRecord r,
+			final String baseURL) throws IOException {
+		r.setCold(ChemicalCold.No);
+		r.setFlamm(ChemicalFlamm.No);
+
+		final double boiling = _fetchBoilingPoint(baseURL);
+
+		if (boiling < 36.0) {
+			r.setCold(ChemicalCold.Yes);
+		}
+
+		final String content = Jsoup.connect(baseURL + ":flpt").get().text();
+
+		LOG.debug("TOXNET Flash Point Response: " + content);
+
+		final Pattern p = Pattern.compile("([\\d.]+) (deg|DEG) F");
+		final Matcher m = p.matcher(content);
+
+		while (m.find()) {
+			final String fp = m.group(1);
+			LOG.debug("Flash point: " + fp);
+			final double flash = Double.parseDouble(fp);
+			if (flash <= 100.4) {
+				r.setFlamm(ChemicalFlamm.Yes);
+			}
 		}
 
 	}
@@ -400,6 +564,40 @@ public class ChemicalWebSearch {
 		} catch (final IOException e) {
 			LOG.debug("Error connection to WebWISER.", e.getCause());
 		}
+	}
+
+	public static void fillToxicityInformation(final ChemicalRecord r,
+			final String baseURL) throws IOException {
+		r.setToxic(ChemicalToxic.Practically_nontoxic);
+		final String content = Jsoup.connect(baseURL + ":ntxv").get().text();
+		LOG.debug("TOXNET Toxicity Response: " + content);
+		final Pattern p = Pattern.compile("LD50 Rat oral (\\d+) ([a-z]+)");
+		final Matcher m = p.matcher(content);
+		while (m.find()) {
+			final String amount = m.group(1);
+			final String unit = m.group(2);
+
+			LOG.debug("Rat LD50: " + amount + " " + unit);
+
+			final ChemicalAmount ld50 = ChemicalAmountFactory
+					.getChemicalAmount(amount, unit);
+			final ChemicalToxic tox = amountToToxicity((ChemicalMass) ld50);
+
+			if (tox.compareTo(r.getToxic()) < 0) {
+				r.setToxic(tox);
+			}
+		}
+
+	}
+
+	private static void fillTOXNETInformation(final ChemicalRecord record)
+			throws IOException {
+		final String url = getTOXNETBaseUrl(record.getCas());
+
+		fillHazardInformation(record, url);
+		fillToxicityInformation(record, url);
+		fillStorageTypes(record, url);
+
 	}
 
 	private static List<ChemicalRecord> filterByName(
@@ -564,7 +762,17 @@ public class ChemicalWebSearch {
 
 	}
 
-	public static String getTOXNETResponse(final String query) {
+	public static String getTOXNETBaseUrl(final String cas) {
+		final String response = getTOXNETResponse(cas);
+		final Document doc = Jsoup.parse(response);
+		final String tempID = doc.select("TemporaryFile").text();
+
+		return String.format(
+				"http://toxgate.nlm.nih.gov/cgi-bin/sis/search/f?%s:1", tempID);
+
+	}
+
+	private static String getTOXNETResponse(final String query) {
 		final StringBuilder sb = new StringBuilder();
 		try {
 			URL url;
