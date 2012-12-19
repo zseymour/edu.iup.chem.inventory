@@ -3,6 +3,8 @@
  */
 package edu.iup.chem.inventory.db.inventory.tables.records;
 
+import edu.iup.chem.inventory.amount.ChemicalAmount;
+import edu.iup.chem.inventory.amount.ChemicalAmountFactory;
 import edu.iup.chem.inventory.dao.ChemicalDao;
 
 /**
@@ -14,6 +16,7 @@ public class LocationRecord
 		org.jooq.impl.UpdatableRecordImpl<edu.iup.chem.inventory.db.inventory.tables.records.LocationRecord> {
 
 	private static final long	serialVersionUID	= -1191398649;
+	private ChemicalAmount		amount				= null;
 
 	/**
 	 * Create a detached LocationRecord
@@ -57,6 +60,18 @@ public class LocationRecord
 	 */
 	public java.lang.String getCas() {
 		return getValue(edu.iup.chem.inventory.db.inventory.tables.Location.LOCATION.CAS);
+	}
+
+	public ChemicalAmount getChemicalAmount() {
+		// Check if the amount has not been set, or if it has been changed since
+		// we last set it
+		if (amount == null || amount.getQuantity() != getAmount()
+				|| !amount.getUnit().equals(getUnits())) {
+			amount = ChemicalAmountFactory.getChemicalAmount(getAmount(),
+					getUnits());
+		}
+
+		return amount;
 	}
 
 	/**
