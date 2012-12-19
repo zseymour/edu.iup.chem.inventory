@@ -7,53 +7,47 @@ import org.jscience.physics.amount.Amount;
 
 public class ChemicalMass extends ChemicalAmount {
 
-	private String unit;
-	private double quantity;
-	private Amount<Mass> amount;
-	
-	public ChemicalMass(double quantity, String unit, Unit<Mass> units) {
+	private String			unit;
+	private double			quantity;
+	private Amount<Mass>	amount;
+
+	public ChemicalMass(final double quantity, final String unit,
+			final Unit<Mass> units) {
 		this.unit = unit;
 		this.quantity = quantity;
-		this.amount = Amount.valueOf(quantity, units);
-		
+		amount = Amount.valueOf(quantity, units);
+
 	}
-	
-	
+
 	@Override
-	public String getUnit() {
-		return unit;
+	public Amount<Mass> getAmount() {
+		return amount;
 	}
-
-
-	public void setUnit(String unit) {
-		this.unit = unit;
-	}
-
 
 	@Override
 	public double getQuantity() {
 		return quantity;
 	}
 
-
-
-	public void setQuantity(double quantity) {
-		this.quantity = quantity;
+	@Override
+	public String getUnit() {
+		return unit;
 	}
 
-
-	public Amount<Mass> getAmount() {
-		return amount;
-	}
-
-
-	public void setAmount(Amount<Mass> amount) {
+	public void setAmount(final Amount<Mass> amount) {
 		this.amount = amount;
 	}
 
+	public void setQuantity(final double quantity) {
+		this.quantity = quantity;
+	}
+
+	public void setUnit(final String unit) {
+		this.unit = unit;
+	}
 
 	@Override
-	public String toString(){
+	public String toString() {
 		return String.valueOf(quantity) + " " + unit;
 	}
 

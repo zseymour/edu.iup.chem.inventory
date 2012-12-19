@@ -6,53 +6,48 @@ import javax.measure.unit.Unit;
 import org.jscience.physics.amount.Amount;
 
 public class ChemicalVolume extends ChemicalAmount {
-	
-	private String unit;
-	private double quantity;
-	private Amount<Volume> amount;
 
-	public ChemicalVolume(double quantity, String unit, Unit<Volume> units) {
+	private String			unit;
+	private double			quantity;
+	private Amount<Volume>	amount;
+
+	public ChemicalVolume(final double quantity, final String unit,
+			final Unit<Volume> units) {
 		this.unit = unit;
 		this.quantity = quantity;
-		this.amount = Amount.valueOf(quantity, units);
+		amount = Amount.valueOf(quantity, units);
 	}
-	
-	
+
 	@Override
-	public String getUnit() {
-		return unit;
+	public Amount<Volume> getAmount() {
+		return amount;
 	}
-
-
-	public void setUnit(String unit) {
-		this.unit = unit;
-	}
-
 
 	@Override
 	public double getQuantity() {
 		return quantity;
 	}
 
-
-	public void setQuantity(double quantity) {
-		this.quantity = quantity;
+	@Override
+	public String getUnit() {
+		return unit;
 	}
 
-
-	public Amount<Volume> getAmount() {
-		return amount;
-	}
-
-
-	public void setAmount(Amount<Volume> amount) {
+	public void setAmount(final Amount<Volume> amount) {
 		this.amount = amount;
 	}
 
+	public void setQuantity(final double quantity) {
+		this.quantity = quantity;
+	}
+
+	public void setUnit(final String unit) {
+		this.unit = unit;
+	}
 
 	@Override
-	public String toString(){
+	public String toString() {
 		return String.valueOf(quantity) + " " + unit;
 	}
-	
+
 }

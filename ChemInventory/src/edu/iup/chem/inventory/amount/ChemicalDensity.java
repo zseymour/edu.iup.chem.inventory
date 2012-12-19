@@ -19,6 +19,11 @@ public class ChemicalDensity extends ChemicalAmount {
 	}
 
 	@Override
+	public Amount<VolumetricDensity> getAmount() {
+		return amount;
+	}
+
+	@Override
 	public double getQuantity() {
 		return quantity;
 	}

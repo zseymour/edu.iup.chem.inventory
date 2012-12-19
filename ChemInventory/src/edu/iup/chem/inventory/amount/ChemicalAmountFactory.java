@@ -9,11 +9,12 @@ import static javax.measure.unit.SI.GRAM;
 import static javax.measure.unit.SI.KILOGRAM;
 import static javax.measure.unit.SI.MILLI;
 
-public class ChemicalAmountFactory {
-	public static ChemicalAmount getChemicalAmount(final String amount,
-			final String unit) {
-		final double quantity = Double.parseDouble(amount);
+import javax.measure.quantity.VolumetricDensity;
+import javax.measure.unit.Unit;
 
+public class ChemicalAmountFactory {
+	public static ChemicalAmount getChemicalAmount(final Double quantity,
+			final String unit) {
 		switch (unit) {
 			case "kilograms":
 			case "kilogram":
@@ -53,8 +54,21 @@ public class ChemicalAmountFactory {
 			case "fluid ounce":
 			case "fluid ounces":
 				return new ChemicalVolume(quantity, unit, OUNCE_LIQUID_US);
+			case "kg/m3":
+				return new ChemicalDensity(quantity * 1000, unit,
+						VolumetricDensity.UNIT);
+			case "g/cu cm":
+				return new ChemicalDensity(quantity, "g/mL",
+						(Unit<VolumetricDensity>) GRAM.divide(MILLI(LITER)));
 			default:
 				return null;
 		}
+	}
+
+	public static ChemicalAmount getChemicalAmount(final String amount,
+			final String unit) {
+		final double quantity = Double.parseDouble(amount);
+
+		return getChemicalAmount(quantity, unit);
 	}
 }
