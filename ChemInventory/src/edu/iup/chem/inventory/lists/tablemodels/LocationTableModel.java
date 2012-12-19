@@ -10,7 +10,6 @@ import org.apache.log4j.Logger;
 
 import edu.iup.chem.inventory.Utils;
 import edu.iup.chem.inventory.amount.ChemicalAmount;
-import edu.iup.chem.inventory.amount.ChemicalAmountFactory;
 import edu.iup.chem.inventory.dao.LocationDao;
 import edu.iup.chem.inventory.db.inventory.tables.records.LocationRecord;
 
@@ -89,8 +88,7 @@ public class LocationTableModel extends AbstractTableModel {
 			case CAS_COLUMN:
 				return rec.getCas();
 			case AMOUNT_COLUMN:
-				return ChemicalAmountFactory.getChemicalAmount(rec.getAmount()
-						.toString(), rec.getUnits());
+				return rec.getChemicalAmount();
 			case ARRIVAL_COLUMN:
 				return rec.getArrival();
 			case EXP_COLUMN:
