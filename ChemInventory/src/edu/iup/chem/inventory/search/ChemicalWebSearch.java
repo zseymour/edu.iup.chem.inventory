@@ -15,7 +15,11 @@ import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,6 +40,9 @@ import com.chemspider.www.MassSpecAPIStub.GetRecordMol;
 import com.chemspider.www.SearchStub;
 import com.chemspider.www.SearchStub.GetCompoundThumbnail;
 import com.chemspider.www.SearchStub.SimpleSearch;
+import com.chemspider.www.SpectraStub;
+import com.chemspider.www.SpectraStub.CSSpectrumInfo;
+import com.chemspider.www.SpectraStub.GetCompoundSpectraInfo;
 
 import edu.iup.chem.inventory.Constants;
 import edu.iup.chem.inventory.amount.ChemicalAmount;
@@ -56,7 +63,8 @@ import edu.iup.chem.inventory.lists.comparators.ChemicalAmountComparator;
 
 public class ChemicalWebSearch {
 
-	private final static Logger	LOG	= Logger.getLogger(ChemicalWebSearch.class);
+	private final static Logger			LOG			= Logger.getLogger(ChemicalWebSearch.class);
+	private static Map<String, String>	hazardTable	= null;
 
 	private static double _fetchBoilingPoint(final String baseURL)
 			throws IOException {
@@ -64,7 +72,7 @@ public class ChemicalWebSearch {
 
 		LOG.debug("TOXNET Boiling Point Response: " + content);
 
-		final Pattern p = Pattern.compile("([\\d.]+) deg");
+		final Pattern p = Pattern.compile("([\\d.]+) (deg|DEG)");
 		final Matcher m = p.matcher(content);
 
 		while (m.find()) {
@@ -74,7 +82,7 @@ public class ChemicalWebSearch {
 			return boiling;
 		}
 
-		return 0;
+		throw new IOException();
 	}
 
 	private static ChemicalDensity _fetchDensity(final String baseURL)
@@ -84,17 +92,17 @@ public class ChemicalWebSearch {
 		LOG.debug("TOXNET Density Response: " + content);
 
 		final Pattern solidPattern = Pattern
-				.compile("([\\d.]+) ([A-Za-z]+/[A-Za-z ]+)");
+				.compile("([\\d.]+) ([A-Za-z]+/[A-Za-z]+ ?[A-Za-z]+)");
 		final Matcher solidMatcher = solidPattern.matcher(content);
 
 		final Pattern liquidPattern = Pattern
-				.compile("Gravity: ([\\d.]+) (at|@)?");
+				.compile("Gravity: ([\\d.]+)(-[\\d.]+)? (at|@)?");
 		final Matcher liquidMatcher = liquidPattern.matcher(content);
 
 		if (solidMatcher.find()) {
 			final String value = solidMatcher.group(1);
-			final String unit = solidMatcher.group(2);
-
+			String unit = solidMatcher.group(2);
+			unit = unit.replace("at", "");
 			LOG.debug("Density: " + value + " " + unit);
 
 			return (ChemicalDensity) ChemicalAmountFactory.getChemicalAmount(
@@ -105,11 +113,29 @@ public class ChemicalWebSearch {
 			LOG.debug("Specific gravity: " + gravity);
 
 			return (ChemicalDensity) ChemicalAmountFactory.getChemicalAmount(
-					gravity, "kg/m3");
+					gravity, "specific gravity");
 		}
 
 		throw new NumberFormatException(
 				"Density information improperly formatted");
+	}
+
+	private static double _fetchFlashPoint(final String baseURL)
+			throws IOException {
+		final String content = Jsoup.connect(baseURL + ":flpt").get().text();
+
+		LOG.debug("TOXNET Flash Point Response: " + content);
+
+		final Pattern p = Pattern.compile("([\\d.]+) (deg|DEG) F");
+		final Matcher m = p.matcher(content);
+
+		while (m.find()) {
+			final String fp = m.group(1);
+			LOG.debug("Flash point: " + fp);
+			return Double.parseDouble(fp);
+		}
+
+		throw new IOException();
 	}
 
 	private static Double _fetchMeltingPoint(final String baseURL)
@@ -118,7 +144,7 @@ public class ChemicalWebSearch {
 
 		LOG.debug("TOXNET Melting Point Response: " + content);
 
-		final Pattern p = Pattern.compile("([\\d.]+) deg");
+		final Pattern p = Pattern.compile("([\\d.]+) (deg|DEG)");
 		final Matcher m = p.matcher(content);
 
 		while (m.find()) {
@@ -128,7 +154,33 @@ public class ChemicalWebSearch {
 			return melting;
 		}
 
-		return 0.0;
+		throw new IOException();
+	}
+
+	private static ChemicalMass _getLD50(final String baseURL)
+			throws IOException {
+		final String content = Jsoup.connect(baseURL + ":ntxv").get().text();
+		LOG.debug("TOXNET Toxicity Response: " + content);
+		final Pattern p = Pattern
+				.compile("LD50 (r|R)at .*? oral (\\d+) ([A-Za-z]+)");
+		final Matcher m = p.matcher(content);
+		ChemicalMass bestLD50 = (ChemicalMass) ChemicalAmountFactory
+				.getChemicalAmount(0.0, "mg");
+		while (m.find()) {
+			final String amount = m.group(2);
+			final String unit = m.group(3);
+
+			LOG.debug("Rat LD50: " + amount + " " + unit);
+
+			final ChemicalAmount ld50 = ChemicalAmountFactory
+					.getChemicalAmount(amount, unit);
+
+			if (new ChemicalAmountComparator().compare(ld50, bestLD50) > 0) {
+				bestLD50 = (ChemicalMass) ld50;
+			}
+		}
+
+		return bestLD50;
 	}
 
 	/**
@@ -139,8 +191,8 @@ public class ChemicalWebSearch {
 	 * @param ld50PerKilo
 	 * @return
 	 */
-	private static ChemicalToxic amountToToxicity(final ChemicalMass ld50PerKilo) {
-		final ArrayList<ChemicalMass> levels = Constants.LD50_LEVELS;
+	public static ChemicalToxic amountToToxicity(final ChemicalMass ld50PerKilo) {
+		final ArrayList<ChemicalMass> levels = new ArrayList<>(Constants.LD50_LEVELS);
 		levels.add(ld50PerKilo);
 		Collections.sort(levels, new ChemicalAmountComparator());
 
@@ -164,75 +216,11 @@ public class ChemicalWebSearch {
 		return formula.replaceAll("[ _{}]", "");
 	}
 
-	private static ChemicalStorageClass dotClassToIUPClass(final String dotClass) {
-		final String classStr = dotClass.substring("Class".length() + 1,
-				dotClass.indexOf("-") - 1).trim();
-		final int classLevel = Integer.parseInt(classStr);
-
-		switch (classLevel) {
-			case 1:
-				return ChemicalStorageClass.Explosives;
-			case 2:
-				return ChemicalStorageClass.Flammable;
-			case 3:
-				return ChemicalStorageClass.Flammable;
-			case 4:
-				return ChemicalStorageClass.Flammable;
-			case 5:
-				return ChemicalStorageClass.Oxidizers;
-			case 6:
-				return ChemicalStorageClass.Highly_Toxic;
-			case 7:
-				return ChemicalStorageClass.Radioactive;
-			case 8:
-				return ChemicalStorageClass.Inorganic_Acids;
-			default:
-				return ChemicalStorageClass.Low_Hazard;
-		}
-	}
-
-	private static ChemicalStorageClass dotDivisionToIUPClass(
-			final String dotDivision) {
-		final String classStr = dotDivision.substring("Divison".length() + 1,
-				dotDivision.indexOf("-") - 1).trim();
-
-		switch (classStr) {
-			case "1.1":
-				return ChemicalStorageClass.Explosives;
-			case "1.2":
-				return ChemicalStorageClass.Explosives;
-			case "1.3":
-				return ChemicalStorageClass.Explosives;
-			case "2.1":
-				return ChemicalStorageClass.Flammable;
-			case "2.3":
-				return ChemicalStorageClass.Highly_Toxic;
-			case "3":
-				return ChemicalStorageClass.Flammable;
-			case "4.1":
-				return ChemicalStorageClass.Flammable;
-			case "4.2":
-				return ChemicalStorageClass.Pyrophoric_Materials;
-			case "5.1":
-				return ChemicalStorageClass.Oxidizers;
-			case "5.2":
-				return ChemicalStorageClass.Organic_Peroxides;
-			case "6.1":
-				return ChemicalStorageClass.Highly_Toxic;
-			case "7":
-				return ChemicalStorageClass.Radioactive;
-			case "8":
-				return ChemicalStorageClass.Inorganic_Acids;
-			default:
-				return ChemicalStorageClass.Low_Hazard;
-		}
-	}
-
 	public static Double fetchBoilingPoint(final String cas) {
 		try {
 			return _fetchBoilingPoint(getTOXNETBaseUrl(cas));
 		} catch (final IOException e) {
-			return 0.0;
+			return Double.MAX_VALUE;
 		}
 	}
 
@@ -241,15 +229,26 @@ public class ChemicalWebSearch {
 			return _fetchDensity(getTOXNETBaseUrl(cas));
 		} catch (final IOException | NumberFormatException e) {
 			return (ChemicalDensity) ChemicalAmountFactory.getChemicalAmount(
-					1.0, "kg/m3");
+					1.0, "specific gravity");
 		}
+	}
+
+	public static Double fetchFlashPoint(final String cas) {
+		Double flash;
+		try {
+			flash = _fetchFlashPoint(getTOXNETBaseUrl(cas));
+		} catch (final IOException e) {
+			flash = Double.MAX_VALUE;
+		}
+
+		return flash;
 	}
 
 	public static Double fetchMeltingPoint(final String cas) {
 		try {
 			return _fetchMeltingPoint(getTOXNETBaseUrl(cas));
 		} catch (final IOException e) {
-			return 0.0;
+			return Double.MAX_VALUE;
 		}
 	}
 
@@ -344,52 +343,25 @@ public class ChemicalWebSearch {
 
 	}
 
-	private static void fillStorageClass(final ChemicalRecord r) {
-		r.setStorageClass(ChemicalStorageClass.Low_Hazard);
+	public static void fillStorageClass(final ChemicalRecord r,
+			final String baseURL) {
+		ChemicalStorageClass thisClass = ChemicalStorageClass.Unknown;
 
-		try {
-			final String url = getWebWiserPage(r.getCas());
-
-			if (url == null) {
-				return;
-			}
-
-			final Document doc = Jsoup.connect(
-					url + "&selectedDataMenuItemID=86").get();
-			final Elements dotClasses = doc.select(
-					"div#substanceDataContent ul").select("li");
-
-			String dotClass = null;
-			String dotDivision = null;
-			for (final Element e : dotClasses) {
-				final String currentClass = e.text();
-				if (currentClass.startsWith("Class") && dotClass == null) {
-					// This is the highest level class this compound has.
-					dotClass = currentClass;
-					continue;
-				} else if (currentClass.startsWith("Division")) {
-					// break after we find division, because this is the most
-					// specific, highest numbered class
-					dotDivision = currentClass;
-				}
-			}
-
-			ChemicalStorageClass storageClass = ChemicalStorageClass.Low_Hazard;
-			if (dotClass == null) {
-				// Do nothing
-			} else if (dotDivision == null) {
-				storageClass = dotClassToIUPClass(dotClass);
-			} else {
-				storageClass = dotDivisionToIUPClass(dotDivision);
-			}
-
-			LOG.debug(r.getName() + " is " + storageClass.getLiteral());
-
-			r.setStorageClass(storageClass);
-
-		} catch (final IOException e) {
-			LOG.debug("Error connecting to WebWISER.");
+		final double dotHazard = lookupDOTHazard(r.getName());
+		if (dotHazard > 0) {
+			thisClass = getStorageFromDOTClass(Double.toString(dotHazard), r);
 		}
+
+		switch (thisClass) {
+			case Unknown:
+			case Inorganic_acids:
+				thisClass = testForSubstructures(r);
+				break;
+			default:
+				break;
+		}
+
+		r.setStorageClass(thisClass);
 	}
 
 	private static void fillStorageTypes(final ChemicalRecord r) {
@@ -485,26 +457,37 @@ public class ChemicalWebSearch {
 		r.setCold(ChemicalCold.No);
 		r.setFlamm(ChemicalFlamm.No);
 
-		final double boiling = _fetchBoilingPoint(baseURL);
+		double boiling;
+		try {
+			boiling = _fetchBoilingPoint(baseURL);
+		} catch (final IOException e) {
+			boiling = Double.MAX_VALUE;
+		}
 
 		if (boiling < 36.0) {
 			r.setCold(ChemicalCold.Yes);
 		}
 
-		final String content = Jsoup.connect(baseURL + ":flpt").get().text();
+		double flash;
+		try {
+			flash = _fetchFlashPoint(baseURL);
+		} catch (final IOException e) {
+			flash = Double.MAX_VALUE;
+		}
 
-		LOG.debug("TOXNET Flash Point Response: " + content);
+		if (flash < 100.4) {
+			r.setFlamm(ChemicalFlamm.Yes);
+		}
 
-		final Pattern p = Pattern.compile("([\\d.]+) (deg|DEG) F");
-		final Matcher m = p.matcher(content);
-
-		while (m.find()) {
-			final String fp = m.group(1);
-			LOG.debug("Flash point: " + fp);
-			final double flash = Double.parseDouble(fp);
-			if (flash <= 100.4) {
-				r.setFlamm(ChemicalFlamm.Yes);
-			}
+		// adjust NFPA Flammability
+		if (flash < 73 && boiling < 37.8) {
+			r.setNfpaF(4);
+		} else if (flash < 73 && boiling >= 37.8 || flash >= 73 && flash < 100) {
+			r.setNfpaF(3);
+		} else if (flash >= 100 && flash < 200) {
+			r.setNfpaF(2);
+		} else if (flash >= 200) {
+			r.setNfpaF(1);
 		}
 
 	}
@@ -568,35 +551,31 @@ public class ChemicalWebSearch {
 
 	public static void fillToxicityInformation(final ChemicalRecord r,
 			final String baseURL) throws IOException {
-		r.setToxic(ChemicalToxic.Practically_nontoxic);
-		final String content = Jsoup.connect(baseURL + ":ntxv").get().text();
-		LOG.debug("TOXNET Toxicity Response: " + content);
-		final Pattern p = Pattern.compile("LD50 Rat oral (\\d+) ([a-z]+)");
-		final Matcher m = p.matcher(content);
-		while (m.find()) {
-			final String amount = m.group(1);
-			final String unit = m.group(2);
+		r.setToxic(ChemicalToxic.Unknown);
 
-			LOG.debug("Rat LD50: " + amount + " " + unit);
+		final ChemicalAmount ld50 = _getLD50(baseURL);
+		final ChemicalToxic tox = amountToToxicity((ChemicalMass) ld50);
 
-			final ChemicalAmount ld50 = ChemicalAmountFactory
-					.getChemicalAmount(amount, unit);
-			final ChemicalToxic tox = amountToToxicity((ChemicalMass) ld50);
-
-			if (tox.compareTo(r.getToxic()) < 0) {
-				r.setToxic(tox);
-			}
+		r.setLd50WithUnits((ChemicalMass) ld50);
+		if (ld50.getQuantity() != 0 && tox.compareTo(ChemicalToxic.Unknown) > 0) {
+			r.setToxic(tox);
 		}
 
 	}
 
-	private static void fillTOXNETInformation(final ChemicalRecord record)
-			throws IOException {
+	private static void fillTOXNETInformation(final ChemicalRecord record) {
 		final String url = getTOXNETBaseUrl(record.getCas());
 
-		fillHazardInformation(record, url);
-		fillToxicityInformation(record, url);
-		fillStorageTypes(record, url);
+		try {
+			fillHazardInformation(record, url);
+			fillToxicityInformation(record, url);
+			fillStorageTypes(record, url);
+			fillCancerInformation(record);
+			fillStorageClass(record, url);
+
+		} catch (final IOException e) {
+			LOG.error("Failed to retreive TOXNET information", e.getCause());
+		}
 
 	}
 
@@ -672,6 +651,15 @@ public class ChemicalWebSearch {
 		return csid;
 	}
 
+	public static ChemicalMass getLD50(final String cas) {
+		try {
+			return _getLD50(getTOXNETBaseUrl(cas));
+		} catch (final IOException e) {
+			return (ChemicalMass) ChemicalAmountFactory.getChemicalAmount(0.0,
+					"mg");
+		}
+	}
+
 	public static String getNames(final String identifier) {
 		final String cirURL = String.format(Constants.CIR_URL_FORMAT,
 				identifier, "names");
@@ -704,6 +692,127 @@ public class ChemicalWebSearch {
 		}
 
 		return names;
+	}
+
+	public static ChemicalRecord getNewChemical(final String cas, String name) {
+		List<ChemicalRecord> records = searchByCAS(cas);
+
+		if (records.size() > 1) {
+			// Strip everything after a comma, which may be "lab grade",
+			// "anhydrous", etc.
+			name = name.substring(0, name.indexOf(","));
+			records = filterByName(records, name);
+		}
+
+		if (records.isEmpty()) {
+			return null;
+		}
+
+		final ChemicalRecord rec = records.get(0);
+
+		rec.setName(name);
+
+		return rec;
+	}
+
+	public static List<SpectraResult> getSpectraFromCSID(final String csid) {
+		final List<SpectraResult> results = new ArrayList<>();
+		try {
+			final Set<String> types = new HashSet<>();
+			final SpectraStub spectraSearch = new SpectraStub();
+			final GetCompoundSpectraInfo getSpectra = new GetCompoundSpectraInfo();
+			getSpectra.setCsid(Integer.parseInt(csid));
+			getSpectra.setToken(Constants.CHEMSPIDER_TOKEN);
+			final CSSpectrumInfo[] spectra = spectraSearch
+					.getCompoundSpectraInfo(getSpectra)
+					.getGetCompoundSpectraInfoResult().getCSSpectrumInfo();
+			LOG.trace(spectra == null ? 0 : spectra.length
+					+ " spectra returned");
+			int i = 1;
+
+			if (spectra != null) {
+				for (final CSSpectrumInfo info : spectra) {
+					LOG.trace(String.format("%d. %s -- %s", i++,
+							info.getSpc_type(), info.getSpc_id()));
+
+					final String type = info.getSpc_type();
+					if (types.contains(type)) {
+						continue;
+					}
+
+					types.add(type);
+
+					final String imageURL = String
+							.format("http://www.chemspider.com/FilesHandler.ashx?type=blob&disp=1&id=%s",
+									info.getSpc_id());
+					final SpectraResult r = new SpectraResult(csid, type,
+							imageURL);
+
+					results.add(r);
+				}
+			}
+
+		} catch (final AxisFault e) {
+			LOG.debug("Error initializing spectra search");
+		} catch (final RemoteException e) {
+			LOG.warn("Error performing spectrum search");
+		}
+
+		return results;
+
+	}
+
+	private static ChemicalStorageClass getStorageFromDOTClass(
+			final String dotClass, final ChemicalRecord r) {
+		ChemicalStorageClass ourClass;
+
+		switch (dotClass) {
+			case "1":
+			case "1.1":
+				r.setNfpaR(4);
+				//$FALL-THROUGH$
+			case "1.2":
+			case "1.3":
+			case "1.4":
+			case "1.5":
+			case "1.6":
+				ourClass = ChemicalStorageClass.Flammables;
+				break;
+			case "2.1":
+				ourClass = ChemicalStorageClass.Reactive_gas;
+				break;
+			case "2.2":
+				ourClass = ChemicalStorageClass.Non_reactive_gas;
+				break;
+			case "2.3":
+				ourClass = ChemicalStorageClass.Biomedical;
+				r.setNfpaH(3);
+				break;
+			case "4.3":
+				ourClass = ChemicalStorageClass.Water_reactive;
+				r.setNfpaS(ChemicalNfpaS.W);
+				break;
+			case "5.1":
+			case "5.2":
+				ourClass = ChemicalStorageClass.Oxidizers;
+				r.setNfpaS(ChemicalNfpaS.OX);
+				break;
+			case "6.1":
+				ourClass = ChemicalStorageClass.Biomedical;
+				r.setNfpaH(3);
+				break;
+			case "7":
+				ourClass = ChemicalStorageClass.Radioactive;
+				r.setNfpaH(2);
+				break;
+			case "8":
+				ourClass = ChemicalStorageClass.Inorganic_acids;
+				break;
+			default:
+				ourClass = ChemicalStorageClass.Unknown;
+		}
+
+		return ourClass;
 	}
 
 	public static BufferedImage getStructureThumbnailFromCSID(final String csid) {
@@ -838,6 +947,74 @@ public class ChemicalWebSearch {
 		return url;
 	}
 
+	private static void initializeHazardTable() {
+		final InputStream in = ClassLoader
+				.getSystemResourceAsStream("res/hazard.html");
+		hazardTable = new HashMap<>();
+		Document doc;
+		try {
+			doc = Jsoup.parse(in, null, "/");
+			final Element hazards = doc.select("table#hazard").first();
+
+			final Elements cells = hazards.select("td:eq(1),td:eq(2)");
+			cells.remove(0);
+			cells.remove(0);
+
+			for (int i = 0; i < cells.size() - 1; i += 2) {
+				final String key = cells.get(i).text();
+				String value = cells.get(i + 1).text();
+
+				if (key == null) {
+					LOG.debug("Trying to add null key to hazard table on row "
+							+ i);
+				}
+
+				if (value != null) {
+					value = value.replaceAll("[A-Za-z]", "");
+				}
+
+				hazardTable.put(key, value);
+			}
+
+			LOG.debug("Intialized hazard table with " + hazardTable.size()
+					+ " elements.");
+		} catch (final IOException e) {
+			LOG.error("Error parsing resource.", e.getCause());
+		}
+
+	}
+
+	private static double lookupDOTHazard(String name) {
+		if (hazardTable == null) {
+			initializeHazardTable();
+		}
+
+		double hazardLevel = 100;
+		if (name == null) {
+			name = "null";
+		}
+		final Pattern p = Pattern
+				.compile("\\b" + Pattern.quote(name) + "[, .]",
+						Pattern.CASE_INSENSITIVE);
+
+		for (final Map.Entry<String, String> entry : hazardTable.entrySet()) {
+			if (p.matcher(entry.getKey()).find()) {
+				try {
+					final double thisLevel = Double.parseDouble(entry
+							.getValue());
+					if (thisLevel < hazardLevel) {
+						hazardLevel = thisLevel;
+					}
+				} catch (final NumberFormatException e) {
+					continue;
+				}
+			}
+
+		}
+
+		return hazardLevel == 100 ? -1 : hazardLevel;
+	}
+
 	public static List<ChemicalRecord> searchByCAS(final String cas) {
 		final String csid = getCSID(cas);
 		final List<ChemicalRecord> records = new ArrayList<>();
@@ -857,7 +1034,7 @@ public class ChemicalWebSearch {
 
 			final GetExtendedCompoundInfoArray compoundQuery = new GetExtendedCompoundInfoArray();
 			final ArrayOfInt csidsInts = new ArrayOfInt();
-			csidsInts.set_int(new int[] { Integer.parseInt(csid) });
+			csidsInts.set_int(new int[] { Integer.parseInt(csid.trim()) });
 			compoundQuery.setCSIDs(csidsInts);
 			compoundQuery.setToken(Constants.CHEMSPIDER_TOKEN);
 			final ExtendedCompoundInfo[] compounds = massStub
@@ -875,11 +1052,7 @@ public class ChemicalWebSearch {
 					r.setSmiles(c.getSMILES());
 					r.setCsid(Integer.toString(c.getCSID()));
 					r.setInchi(c.getInChI());
-					fillHazardInformation(r);
-					fillCancerInformation(r);
-					fillToxicityInformation(r);
-					fillStorageTypes(r);
-					fillStorageClass(r);
+					fillTOXNETInformation(r);
 
 					records.add(r);
 				}
@@ -949,6 +1122,49 @@ public class ChemicalWebSearch {
 		return null;
 	}
 
+	private static ChemicalStorageClass testForSubstructures(
+			final ChemicalRecord r) {
+		ChemicalStorageClass matchedClass = ChemicalStorageClass.Unknown;
+		final String SMILES = r.getSmiles();
+		final String name = r.getName() == null ? "null" : r.getName();
+
+		// Do some fancy things checking for substructures
+		if (ChemicalSubstructureSearcher.isOrganicBase(SMILES)) {
+			matchedClass = ChemicalStorageClass.Organic_base;
+		} else if (ChemicalSubstructureSearcher.isOrganicAcid(SMILES)) {
+			matchedClass = ChemicalStorageClass.Organic_acids;
+		} else if (ChemicalSubstructureSearcher.isOxidizer(SMILES)) {
+			matchedClass = ChemicalStorageClass.Oxidizers;
+		} else if (Constants.INORGANIC_ACIDS.containsKey(name)) {
+			matchedClass = ChemicalStorageClass.Inorganic_acids;
+		} else if (ChemicalSubstructureSearcher.isAromatic(SMILES)) {
+			matchedClass = ChemicalStorageClass.Aromatics;
+		} else if (ChemicalSubstructureSearcher.isCyanohydrin(SMILES)) {
+			matchedClass = ChemicalStorageClass.Cyanohydrins;
+		} else if (ChemicalSubstructureSearcher.isAlcohol(SMILES)) {
+			matchedClass = ChemicalStorageClass.Alcohols;
+		}
+		// Now check the names for substrings
+		else if (name.contains("hydroxide") || name.contains("carbonate")
+				|| name.contains("ammonium")) {
+			matchedClass = ChemicalStorageClass.Inorganic_base;
+		} else if (name.startsWith("Hydro") || name.startsWith("Hypo")
+				|| name.contains("acid")) {
+			matchedClass = ChemicalStorageClass.Inorganic_acids;
+		} else if (name.contains("amine") || name.contains("amino")
+				|| name.contains("Amino")) {
+			matchedClass = ChemicalStorageClass.Organic_base;
+		} else if (name.endsWith("one") || name.endsWith("ol")
+				|| name.contains("hydroxy") || name.contains("ether")) {
+			matchedClass = ChemicalStorageClass.Alcohols;
+		} else if (name.contains("peroxide")) {
+			matchedClass = ChemicalStorageClass.Oxidizers;
+			r.setNfpaS(ChemicalNfpaS.OX);
+		}
+
+		return matchedClass;
+	}
+
 	/**
 	 * Retrieves data from Internet for a given chemical and stores it back to
 	 * the database.
@@ -986,7 +1202,7 @@ public class ChemicalWebSearch {
 			newRecord.setCarc(oldRecord.getCarc());
 		}
 
-		if (newRecord.getStorageClass().equals(ChemicalStorageClass.Low_Hazard)) {
+		if (newRecord.getStorageClass().equals(ChemicalStorageClass.Unknown)) {
 			newRecord.setStorageClass(oldRecord.getStorageClass());
 		}
 

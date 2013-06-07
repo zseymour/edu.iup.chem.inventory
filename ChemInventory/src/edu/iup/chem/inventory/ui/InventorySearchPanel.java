@@ -1,23 +1,25 @@
 package edu.iup.chem.inventory.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import javax.swing.Box;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JProgressBar;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
@@ -27,8 +29,6 @@ import javax.swing.SortOrder;
 import javax.swing.SwingWorker;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.event.TableModelEvent;
-import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.JTableHeader;
@@ -50,14 +50,19 @@ import org.jdesktop.swingx.renderer.StringValue;
 import org.jdesktop.swingx.renderer.StringValues;
 import org.jdesktop.swingx.table.DatePickerCellEditor;
 import org.jdesktop.swingx.table.TableColumnExt;
-import org.openscience.cdk.Molecule;
+import org.openscience.cdk.AtomContainer;
 
+import com.ibm.icu.util.Calendar;
+
+import edu.iup.chem.inventory.Utils;
 import edu.iup.chem.inventory.dao.LocationDao;
 import edu.iup.chem.inventory.dao.RoomDao;
+import edu.iup.chem.inventory.db.inventory.tables.records.ChemicalRecord;
 import edu.iup.chem.inventory.db.inventory.tables.records.LocationRecord;
 import edu.iup.chem.inventory.db.inventory.tables.records.RoomRecord;
+import edu.iup.chem.inventory.index.Index;
 import edu.iup.chem.inventory.lists.celleditor.AmountCellEditor;
-import edu.iup.chem.inventory.lists.comparators.ChemicalAmountComparator;
+import edu.iup.chem.inventory.lists.comparators.InventoryAmountComparator;
 import edu.iup.chem.inventory.lists.tablemodels.LocationTableModel;
 import edu.iup.chem.inventory.misc.Stacker;
 
@@ -68,28 +73,26 @@ public class InventorySearchPanel extends DataPanel {
 
 		private final List<LocationRecord>	chemicals	= new ArrayList<>();
 		private final LocationTableModel	invModel;
-		private final String				cas;
+		private final Integer				cid;
 
-		public DataLoader(final LocationTableModel invModel, final String cas) {
+		public DataLoader(final LocationTableModel invModel, final Integer id) {
 			this.invModel = invModel;
-			this.cas = cas;
+			cid = id;
 		}
 
 		@Override
 		protected List<LocationRecord> doInBackground() throws Exception {
 			List<LocationRecord> fetched = null;
-			final int size = LocationDao.getAllCountWhere(cas);
+			final int size = LocationDao.getAllCountWhere(cid);
 			LOG.debug("Size: " + size);
 
-			new LocationDao();
-			fetched = LocationDao.getAllWhere(cas);
+			fetched = LocationDao.getAllWhere(cid);
 			for (final LocationRecord c : fetched) {
 				publish(c);
 				chemicals.add(c);
 				final int progress = 100 * chemicals.size() / size;
 				// LOG.debug("Setting progress to " + progress);
 				setProgress(progress);
-				Thread.sleep(1);
 			}
 			// We need to close the Connection associated with the cursor
 
@@ -108,6 +111,72 @@ public class InventorySearchPanel extends DataPanel {
 			// LOG.debug("Adding " + moreChemicals.size() +
 			// " more chemicals to table.");
 			invModel.add(moreChemicals);
+		}
+
+	}
+
+	private class MenuActionListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(final ActionEvent e) {
+			switch (e.getActionCommand()) {
+				case "DELETE":
+					LOG.debug("Deleting selected rows.");
+					deleteRows(true);
+					break;
+				case "DUPE":
+					duplicateBottle();
+					break;
+				case "WASTE":
+					markWaste();
+					deleteRows(false);
+					break;
+				case "GAS":
+					markGas();
+					break;
+				default:
+					break;
+			}
+
+		}
+
+		private void duplicateBottle() {
+			final LocationRecord mainRec = getSelectedBottle();
+			final LocationRecord newRec = new LocationRecord();
+
+			newRec.setBottle(LocationDao.getNextAvailableBottle());
+			newRec.setAmount(mainRec.getAmount());
+			newRec.setUnits(mainRec.getUnits());
+			newRec.setArrival(mainRec.getArrival());
+			newRec.setExpiration(mainRec.getExpiration());
+			newRec.setCas(mainRec.getCas());
+			newRec.setInstructor(mainRec.getInstructor());
+			newRec.setRoom(mainRec.getRoom());
+			newRec.setShelf(mainRec.getShelf());
+			newRec.setActive(mainRec.getActive());
+			newRec.setPartNo(mainRec.getPartNo());
+			newRec.setSupplier(mainRec.getSupplier());
+			newRec.setCid(mainRec.getCid());
+
+			LocationDao.store(newRec);
+			fireBottleAdded(newRec);
+
+		}
+
+		private void markGas() {
+			final LocationRecord rec = getSelectedBottle();
+			rec.setType("G");
+			rec.setExpiration(new java.sql.Date(Calendar.getInstance()
+					.getTimeInMillis()));
+			LocationDao.store(rec);
+		}
+
+		private void markWaste() {
+			final LocationRecord rec = getSelectedBottle();
+			rec.setType("W");
+			rec.setExpiration(new java.sql.Date(Calendar.getInstance()
+					.getTimeInMillis()));
+			LocationDao.store(rec);
 		}
 
 	}
@@ -151,10 +220,6 @@ public class InventorySearchPanel extends DataPanel {
 	private JPanel									controlPanel;
 	private JXTable									invTable;
 	private JTextField								filterField;
-	private Box										statusBarLeft;
-
-	private JLabel									actionStatus;
-	private JLabel									tableStatus;
 
 	// private Color[] rowColors;
 	private String									statusLabelString;
@@ -165,10 +230,40 @@ public class InventorySearchPanel extends DataPanel {
 
 	private RowFilter<LocationTableModel, Integer>	searchFilter;
 
+	private JPopupMenu								popUpMenu;
+
 	public InventorySearchPanel() {
 		initModel();
 		initComponents();
-		// initSortingFiltering();
+		if (Utils.userHasEditingPerm()) {
+			buildPopupMenu();
+		}
+	}
+
+	private void buildPopupMenu() {
+		popUpMenu = new JPopupMenu();
+		final ActionListener a = new MenuActionListener();
+		JMenuItem menuItem = new JMenuItem("Delete Bottle", KeyEvent.VK_D);
+		menuItem.addActionListener(a);
+		menuItem.setActionCommand("DELETE");
+		popUpMenu.add(menuItem);
+
+		popUpMenu.addSeparator();
+
+		menuItem = new JMenuItem("Duplicate Bottle", KeyEvent.VK_B);
+		menuItem.addActionListener(a);
+		menuItem.setActionCommand("DUPE");
+		popUpMenu.add(menuItem);
+
+		menuItem = new JMenuItem("Mark as Waste", KeyEvent.VK_W);
+		menuItem.addActionListener(a);
+		menuItem.setActionCommand("WASTE");
+		popUpMenu.add(menuItem);
+
+		menuItem = new JMenuItem("Mark as Gas Cylinder", KeyEvent.VK_G);
+		menuItem.addActionListener(a);
+		menuItem.setActionCommand("GAS");
+		popUpMenu.add(menuItem);
 	}
 
 	private String buildSearchPattern(final String[] array) {
@@ -194,9 +289,6 @@ public class InventorySearchPanel extends DataPanel {
 		} else {
 			invTable.setRowFilter(null);
 		}
-
-		tableStatus.setText((hasFilterString() ? searchLabelString
-				: statusLabelString) + invTable.getRowCount());
 
 	}
 
@@ -269,7 +361,7 @@ public class InventorySearchPanel extends DataPanel {
 		column.setHeaderValue("Amount");
 		column.setPreferredWidth(30);
 		column.setCellRenderer(cellRenderer);
-		column.setComparator(new ChemicalAmountComparator());
+		column.setComparator(new InventoryAmountComparator());
 		column.setCellEditor(new AmountCellEditor());
 		columnModel.addColumn(column);
 
@@ -295,6 +387,14 @@ public class InventorySearchPanel extends DataPanel {
 		column.setCellEditor(dateCellEditor);
 		columnModel.addColumn(column);
 
+		if (Utils.userHasEditingPerm()) {
+			column = new TableColumnExt();
+			column.setModelIndex(LocationTableModel.ACTIVE_COLUMN);
+			column.setHeaderValue("Active");
+			// column.setCellRenderer(cellRenderer);
+			columnModel.addColumn(column);
+		}
+
 		return columnModel;
 	}
 
@@ -318,67 +418,37 @@ public class InventorySearchPanel extends DataPanel {
 		return controlPanel;
 	}
 
-	private Container createStatusBar() {
-		statusLabelString = "Showing ";
-		searchLabelString = "Search found ";
-
-		final Box statusBar = Box.createHorizontalBox();
-
-		// Left status area
-		statusBar.add(Box.createRigidArea(new Dimension(10, 22)));
-		statusBarLeft = Box.createHorizontalBox();
-		statusBar.add(statusBarLeft);
-		actionStatus = new JLabel("No data loaded");
-		actionStatus.setHorizontalAlignment(JLabel.LEADING);
-		statusBarLeft.add(actionStatus);
-
-		// Middle (should stretch)
-		statusBar.add(Box.createHorizontalGlue());
-		statusBar.add(Box.createHorizontalGlue());
-		statusBar.add(Box.createVerticalGlue());
-
-		// Right status area
-		tableStatus = new JLabel(statusLabelString + "0");
-		statusBar.add(tableStatus);
-		statusBar.add(Box.createHorizontalStrut(12));
-
-		// <snip>Track number of rows currently displayed
-		invModel.addTableModelListener(new TableModelListener() {
-			@Override
-			public void tableChanged(final TableModelEvent e) {
-				// Get rowCount from *table*, not model, as the view row count
-				// may be different from the model row count due to filtering
-				tableStatus.setText((hasFilterString() ? searchLabelString
-						: statusLabelString) + invTable.getRowCount());
-			}
-		});
-		// </snip>
-
-		return statusBar;
-	}
-
 	@Override
-	public void deleteRows() {
+	public void deleteRows(final boolean deleteFromDB) {
 		final int row = invTable.getSelectedRow();
 		if (row < 0) {
 			showMessage("Invalid Selection", "Please select a row to remove.");
 			return;
 		}
 		final LocationRecord rec = getRowAtIndex(row);
-		final int selection = JOptionPane.showConfirmDialog(
-				InventorySearchPanel.this,
-				"Are you sure you want to delete Bottle #"
-						+ rec.getBottleNo().toString() + "?",
-				"Delete selected row?", JOptionPane.YES_NO_CANCEL_OPTION,
-				JOptionPane.QUESTION_MESSAGE);
-		if (selection == JOptionPane.YES_OPTION) {
+		int selection = JOptionPane.CANCEL_OPTION;
+		if (deleteFromDB) {
+			selection = JOptionPane.showConfirmDialog(
+					InventorySearchPanel.this,
+					"Are you sure you want to delete Bottle #"
+							+ rec.getBottle() + "?", "Delete selected row?",
+					JOptionPane.YES_NO_CANCEL_OPTION,
+					JOptionPane.QUESTION_MESSAGE);
+		}
+		if (!deleteFromDB || selection == JOptionPane.YES_OPTION) {
 			final int index = invTable.convertRowIndexToModel(row);
-			invModel.removeChemical(index);
+			invModel.removeChemical(index, deleteFromDB);
 		}
 	}
 
+	public void fireBottleAdded(final LocationRecord rec) {
+		invModel.add(rec);
+		Index.addBottle(rec);
+
+	}
+
 	@Override
-	public void fireChemicalsAdded() {
+	public void fireChemicalsAdded(final ChemicalRecord rec) {
 		invModel.fireTableDataChanged();
 	}
 
@@ -405,6 +475,19 @@ public class InventorySearchPanel extends DataPanel {
 		return invModel.getChemical(dataIndex);
 	}
 
+	public LocationRecord getSelectedBottle() {
+		if (hasSelectedRows()) {
+			return getRowAtIndex(invTable.getSelectedRow());
+		}
+
+		return null;
+	}
+
+	@Override
+	public ChemicalRecord getSelectedChemical() {
+		throw new UnsupportedOperationException();
+	}
+
 	protected boolean hasFilterString() {
 		return filterString != null && !filterString.equals("");
 	}
@@ -426,8 +509,8 @@ public class InventorySearchPanel extends DataPanel {
 		// </snip>Set JTable display properties
 		invTable.setColumnModel(createColumnModel());
 		invTable.setAutoCreateRowSorter(true);
-		invTable.setSortOrder(LocationTableModel.CAS_COLUMN,
-				SortOrder.ASCENDING);
+		invTable.setSortOrder(LocationTableModel.AMOUNT_COLUMN,
+				SortOrder.DESCENDING);
 		invTable.setRowHeight(26);
 		invTable.setAutoResizeMode(JTable.AUTO_RESIZE_NEXT_COLUMN);
 		invTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -436,6 +519,35 @@ public class InventorySearchPanel extends DataPanel {
 		invTable.setShowGrid(false);
 		invTable.setHighlighters(HighlighterFactory.createAlternateStriping());
 		// </snip>
+
+		invTable.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mousePressed(final MouseEvent e) {
+				showPopUp(e);
+			}
+
+			@Override
+			public void mouseReleased(final MouseEvent e) {
+				showPopUp(e);
+			}
+
+			public void showPopUp(final MouseEvent e) {
+				final int r = invTable.rowAtPoint(e.getPoint());
+				if (r >= 0 && r < invTable.getRowCount()) {
+					invTable.setRowSelectionInterval(r, r);
+				} else {
+					invTable.clearSelection();
+				}
+
+				final int rowindex = invTable.getSelectedRow();
+				if (rowindex < 0) {
+					return;
+				}
+				if (e.isPopupTrigger() && popUpMenu != null) {
+					popUpMenu.show(e.getComponent(), e.getX(), e.getY());
+				}
+			}
+		});
 
 		// <snip>Initialize preferred size for table's viewable area
 		final Dimension viewSize = new Dimension();
@@ -456,8 +568,6 @@ public class InventorySearchPanel extends DataPanel {
 		final JScrollPane scrollpane = new JScrollPane(invTable);
 		dataPanel = new Stacker(scrollpane);
 		add(dataPanel, BorderLayout.CENTER);
-
-		add(createStatusBar(), BorderLayout.SOUTH);
 
 	}
 
@@ -507,56 +617,15 @@ public class InventorySearchPanel extends DataPanel {
 
 	public void loadData(final String filter) {
 		// create SwingWorker which will load the data on a separate thread
-		final DataLoader loader = new DataLoader(invModel, filter);
+		final DataLoader loader = new DataLoader(invModel,
+				Integer.parseInt(filter));
 
-		actionStatus.setText("Loading data: ");
-
-		// display progress bar while data loads
-		final JProgressBar progressBar = new JProgressBar();
-		statusBarLeft.add(progressBar);
-		loader.addPropertyChangeListener(new PropertyChangeListener() {
-			@Override
-			public void propertyChange(final PropertyChangeEvent event) {
-				if (event.getPropertyName().equals("progress")) {
-					final int progress = ((Integer) event.getNewValue())
-							.intValue();
-					// LOG.debug("Progress set to " + progress);
-					progressBar.setValue(progress);
-
-					if (progress == 100) {
-						statusBarLeft.remove(progressBar);
-						actionStatus.setText("");
-						revalidate();
-					}
-				}
-			}
-		});
 		loader.execute();
-
-		// Launch thread to keep table in sync with database
-		new Thread() {
-			@Override
-			public void run() {
-				while (true) {
-					try {
-						Thread.sleep(120 * 1000);
-					} catch (final InterruptedException e) {
-						LOG.error("Refresh thread interrupted.", e);
-					}
-					if (hasFilterString()) {
-						final List<LocationRecord> chemicals = LocationDao
-								.getAllWhere(filterString);
-						invModel.update(chemicals);
-						LOG.debug("Refreshed table content.");
-					}
-				}
-			}
-		}.start();
 
 	}
 
 	@Override
-	public void search(final Molecule substructure) {
+	public void search(final AtomContainer substructure) {
 		// TODO Auto-generated method stub
 
 	}

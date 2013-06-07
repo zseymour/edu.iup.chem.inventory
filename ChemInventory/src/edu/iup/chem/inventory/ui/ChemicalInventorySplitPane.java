@@ -1,10 +1,14 @@
 package edu.iup.chem.inventory.ui;
 
+import java.awt.CardLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.lang.reflect.Field;
 
 import javax.swing.JButton;
+import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
@@ -13,10 +17,12 @@ import javax.swing.plaf.basic.BasicSplitPaneDivider;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
 
 import org.apache.log4j.Logger;
-import org.openscience.cdk.Molecule;
+import org.openscience.cdk.AtomContainer;
 
 import edu.iup.chem.inventory.Constants;
+import edu.iup.chem.inventory.Utils;
 import edu.iup.chem.inventory.db.inventory.tables.records.ChemicalRecord;
+import edu.iup.chem.inventory.db.inventory.tables.records.LocationRecord;
 
 public class ChemicalInventorySplitPane extends DataPanel {
 
@@ -42,7 +48,7 @@ public class ChemicalInventorySplitPane extends DataPanel {
 		}
 	}
 
-	private boolean						collapsed	= false;
+	private final boolean				collapsed	= false;
 	private final ChemicalSearchPanel	chemicalPanel;
 	private final InventorySearchPanel	inventoryPanel;
 
@@ -55,32 +61,39 @@ public class ChemicalInventorySplitPane extends DataPanel {
 	}
 
 	@Override
-	public void deleteRows() {
-		if (chemicalPanel.hasSelectedRows()
-				&& !inventoryPanel.hasSelectedRows()) {
-			chemicalPanel.deleteRows();
-		} else if (inventoryPanel.hasSelectedRows()) {
-			inventoryPanel.deleteRows();
-		}
+	public void deleteRows(final boolean removeFromDB) {
 
 	}
 
 	@Override
-	public void fireChemicalsAdded() {
-		chemicalPanel.fireChemicalsAdded();
-		inventoryPanel.fireChemicalsAdded();
+	public void fireChemicalsAdded(final ChemicalRecord rec) {
+		chemicalPanel.fireChemicalsAdded(rec);
+		inventoryPanel.fireChemicalsAdded(rec);
 
 	}
 
+	@Override
+	public ChemicalRecord getSelectedChemical() {
+		return chemicalPanel.getSelectedChemical();
+	}
+
 	private void initComponents() {
+		final JPanel chemCard = new JPanel(new CardLayout());
+		chemCard.add(chemicalPanel, "list");
+		chemCard.add(Utils.getTextPanel("No chemicals to show"), "empty");
+
+		final JPanel invCard = new JPanel(new CardLayout());
+		invCard.add(inventoryPanel, "list");
+		invCard.add(
+				Utils.getTextPanel("Please select a chemical to view available inventory"),
+				"empty");
 		// Create a split pane with the two scroll panes in it.
-		splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, chemicalPanel,
-				inventoryPanel);
+		splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, chemCard, invCard);
 		splitPane.setOneTouchExpandable(true);
 		splitPane.setDividerLocation(300);
 		splitPane.setResizeWeight(0.3);
-		chemicalPanel.setPreferredSize(Constants.HALF_SCREEN_SIZE);
-		inventoryPanel.setPreferredSize(Constants.QUARTER_SCREEN_SIZE);
+		chemCard.setPreferredSize(Constants.HALF_SCREEN_SIZE);
+		invCard.setPreferredSize(Constants.QUARTER_SCREEN_SIZE);
 		final ListSelectionListener l = new ListSelectionListener() {
 
 			@Override
@@ -96,29 +109,38 @@ public class ChemicalInventorySplitPane extends DataPanel {
 					LOG.debug("Index " + selectedIndex + " selected.");
 					final ChemicalRecord record = chemicalPanel
 							.getRowAtIndex(selectedIndex);
-					inventoryPanel.start(record.getCas());
-					if (collapsed) {
-						collapsed = false;
-						toggle(splitPane, collapsed);
-					}
+					inventoryPanel.start(record.getCid().toString());
+					((CardLayout) invCard.getLayout()).show(invCard, "list");
 				} else {
 					inventoryPanel.start(null);
-					collapsed = true;
-					toggle(splitPane, collapsed);
+					((CardLayout) invCard.getLayout()).show(invCard, "empty");
 				}
 
 			}
 
 		};
 
-		chemicalPanel.setSelectionListener(l);
+		chemicalPanel.addSelectionListener(l);
+		chemicalPanel.addPropertyChangeListener(new PropertyChangeListener() {
+
+			@Override
+			public void propertyChange(final PropertyChangeEvent evt) {
+				if (evt.getPropertyName().equals("bottle")) {
+					final LocationRecord rec = (LocationRecord) evt
+							.getNewValue();
+					inventoryPanel.fireBottleAdded(rec);
+				}
+			}
+		});
+
+		((CardLayout) invCard.getLayout()).show(invCard, "empty");
 
 		add(splitPane);
 
 	}
 
 	@Override
-	public void search(final Molecule substructure) {
+	public void search(final AtomContainer substructure) {
 		chemicalPanel.search(substructure);
 
 	}

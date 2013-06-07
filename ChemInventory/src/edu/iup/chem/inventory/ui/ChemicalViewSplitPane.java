@@ -1,10 +1,12 @@
 package edu.iup.chem.inventory.ui;
 
+import java.awt.CardLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseEvent;
 import java.lang.reflect.Field;
 
 import javax.swing.JButton;
+import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
@@ -13,9 +15,10 @@ import javax.swing.plaf.basic.BasicSplitPaneDivider;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
 
 import org.apache.log4j.Logger;
-import org.openscience.cdk.Molecule;
+import org.openscience.cdk.AtomContainer;
 
 import edu.iup.chem.inventory.Constants;
+import edu.iup.chem.inventory.Utils;
 import edu.iup.chem.inventory.db.inventory.tables.records.ChemicalRecord;
 
 public class ChemicalViewSplitPane extends DataPanel implements ChemicalLister {
@@ -38,7 +41,7 @@ public class ChemicalViewSplitPane extends DataPanel implements ChemicalLister {
 		}
 	}
 
-	private boolean						collapsed	= false;
+	private final boolean				collapsed	= false;
 	private final ChemicalSearchPanel	chemicalPanel;
 	private final ChemicalViewPanel		viewPanel;
 
@@ -50,20 +53,28 @@ public class ChemicalViewSplitPane extends DataPanel implements ChemicalLister {
 		initComponents();
 	}
 
-	@Override
-	public void deleteRows() {
-		if (chemicalPanel.hasSelectedRows()) {
-			chemicalPanel.deleteRows();
-		}
+	public void addSelectionListener(final ListSelectionListener l) {
+		chemicalPanel.addSelectionListener(l);
+
 	}
 
 	@Override
-	public void fireChemicalsAdded() {
-		chemicalPanel.fireChemicalsAdded();
+	public void deleteRows(final boolean removeFromDB) {
+
+	}
+
+	@Override
+	public void fireChemicalsAdded(final ChemicalRecord rec) {
+		chemicalPanel.fireChemicalsAdded(rec);
 	}
 
 	public ChemicalRecord getRowAtIndex(final int selectedIndex) {
 		return chemicalPanel.getRowAtIndex(selectedIndex);
+	}
+
+	@Override
+	public ChemicalRecord getSelectedChemical() {
+		return chemicalPanel.getSelectedChemical();
 	}
 
 	public boolean hasSelectedRows() {
@@ -71,11 +82,21 @@ public class ChemicalViewSplitPane extends DataPanel implements ChemicalLister {
 	}
 
 	private void initComponents() {
+		final JPanel chemCard = new JPanel(new CardLayout());
+		chemCard.add(chemicalPanel, "list");
+		chemCard.add(Utils.getTextPanel("No chemicals to show"), "empty");
+
+		final JPanel viewCard = new JPanel(new CardLayout());
+		viewCard.add(viewPanel, "list");
+		viewCard.add(
+				Utils.getTextPanel("Please select a chemical to view additional information"),
+				"empty");
+
 		// Create a split pane with the two scroll panes in it.
-		viewPanel.setPreferredSize(Constants.VERT_HALF_SCREEN_SIZE);
-		chemicalPanel.setPreferredSize(Constants.VERT_HALF_SCREEN_SIZE);
-		splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, chemicalPanel,
-				viewPanel);
+		viewCard.setPreferredSize(Constants.VERT_HALF_SCREEN_SIZE);
+		chemCard.setPreferredSize(Constants.VERT_HALF_SCREEN_SIZE);
+		splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, chemCard,
+				viewCard);
 		splitPane.setOneTouchExpandable(true);
 		// splitPane.setDividerLocation(300);
 		splitPane.setResizeWeight(0.3);
@@ -96,34 +117,25 @@ public class ChemicalViewSplitPane extends DataPanel implements ChemicalLister {
 					final ChemicalRecord record = chemicalPanel
 							.getRowAtIndex(selectedIndex);
 					viewPanel.start(record);
-					if (collapsed) {
-						collapsed = false;
-						toggle(splitPane, collapsed);
-					}
+					((CardLayout) viewCard.getLayout()).show(viewCard, "list");
 				} else {
 					viewPanel.start(null);
-					collapsed = true;
-					toggle(splitPane, collapsed);
+					((CardLayout) viewCard.getLayout()).show(viewCard, "empty");
 				}
 
 			}
 
 		};
 
-		chemicalPanel.setSelectionListener(l);
-
+		chemicalPanel.addSelectionListener(l);
+		((CardLayout) viewCard.getLayout()).show(viewCard, "empty");
 		add(splitPane);
 
 	}
 
 	@Override
-	public void search(final Molecule substructure) {
+	public void search(final AtomContainer substructure) {
 		chemicalPanel.search(substructure);
-
-	}
-
-	public void setSelectionListener(final ListSelectionListener l) {
-		chemicalPanel.setSelectionListener(l);
 
 	}
 

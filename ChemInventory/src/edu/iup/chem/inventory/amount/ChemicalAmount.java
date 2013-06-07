@@ -11,4 +11,5 @@ public abstract class ChemicalAmount {
 
 	@Override
 	public abstract String toString();
+
 }

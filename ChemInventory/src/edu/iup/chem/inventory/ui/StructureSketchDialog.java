@@ -11,12 +11,12 @@ import javax.swing.JDialog;
 import javax.swing.JFrame;
 
 import org.apache.log4j.Logger;
+import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.Molecule;
 import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IChemModel;
-import org.openscience.cdk.interfaces.IMolecule;
-import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.jchempaint.JChemPaintPanel;
 
@@ -45,9 +45,9 @@ public class StructureSketchDialog extends JDialog implements ActionListener {
 		final IChemModel chemModel = DefaultChemObjectBuilder.getInstance()
 				.newInstance(IChemModel.class);
 		chemModel.setMoleculeSet(chemModel.getBuilder().newInstance(
-				IMoleculeSet.class));
+				IAtomContainerSet.class));
 		chemModel.getMoleculeSet().addAtomContainer(
-				chemModel.getBuilder().newInstance(IMolecule.class));
+				chemModel.getBuilder().newInstance(IAtomContainer.class));
 
 		sketchPane = new JChemPaintPanel(chemModel);
 		add(sketchPane, BorderLayout.CENTER);
@@ -65,7 +65,7 @@ public class StructureSketchDialog extends JDialog implements ActionListener {
 			final SmilesParser parse = new SmilesParser(
 					DefaultChemObjectBuilder.getInstance());
 			final String smiles = sketchPane.getSmiles();
-			final Molecule m = (Molecule) parse.parseSmiles(smiles);
+			final AtomContainer m = (AtomContainer) parse.parseSmiles(smiles);
 			firePropertyChange("sketch", null, m);
 			// dispose();
 		} catch (ClassNotFoundException | CDKException | IOException

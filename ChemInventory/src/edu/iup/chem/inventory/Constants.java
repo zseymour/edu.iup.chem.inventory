@@ -53,6 +53,167 @@ public class Constants {
 
 	public static final String					CHEMSPIDER_TOKEN			= "d4161535-a3e1-4750-a249-fe1c4402fa9f";
 
+	public static final CaseInsensitiveMap		INORGANIC_ACIDS				= new CaseInsensitiveMap() {
+																				/**
+		 * 
+		 */
+																				private static final long	serialVersionUID	= 5002000351248414648L;
+
+																				{
+																					put("arsenious acid",
+																							null);
+																					put("arsenic acid",
+																							null);
+																					put("chloroauric acid",
+																							null);
+																					put("metaboric acid",
+																							null);
+																					put("orthoboric acid",
+																							null);
+																					put("boric acid",
+																							null);
+																					put("pyroboric acid",
+																							null);
+																					put("perboric acid",
+																							null);
+																					put("fluoroboric acid",
+																							null);
+																					put("metabismuthic acid",
+																							null);
+																					put("hydrobromic acid",
+																							null);
+																					put("hypobromic acid",
+																							null);
+																					put("bromous acid",
+																							null);
+																					put("bromic acid",
+																							null);
+																					put("hydrogen cyanide",
+																							null);
+																					put("prussic acid");
+																					put("carbonic acid",
+																							null);
+																					put("hydrocloric acid",
+																							null);
+																					put("hypochlorous acid",
+																							null);
+																					put("chlorous acid",
+																							null);
+																					put("perchloric acid",
+																							null);
+																					put("chromic acid",
+																							null);
+																					put("dichromic acid",
+																							null);
+																					put("hydrogen fluoride",
+																							null);
+																					put("hydrofluoric acid",
+																							null);
+																					put("ferricyanic acid",
+																							null);
+																					put("ferrocyanic acid",
+																							null);
+																					put("ferric acid",
+																							null);
+																					put("hydrogen iodide",
+																							null);
+																					put("hypoiodous acid",
+																							null);
+																					put("iodic acid",
+																							null);
+																					put("periodic acid",
+																							null);
+																					put("orthoperiodic acid",
+																							null);
+																					put("permanganic acid",
+																							null);
+																					put("manganic acid",
+																							null);
+																					put("manganous acid",
+																							null);
+																					put("nitrous acid",
+																							null);
+																					put("nitric acid",
+																							null);
+																					put("peroxonitric acid",
+																							null);
+																					put("nitroxylic acid",
+																							null);
+																					put("hyponitrous acid",
+																							null);
+																					put("peroxonitrous acid",
+																							null);
+																					put("hydrazoic acid",
+																							null);
+																					put("cyanic acid",
+																							null);
+																					put("isocyanic acid",
+																							null);
+																					put("thiocyanic acid",
+																							null);
+																					put("osmic acid",
+																							null);
+																					put("metaphosphoric acid",
+																							null);
+																					put("phosphorous acid",
+																							null);
+																					put("orthophosphoric acid",
+																							null);
+																					put("phosphoric acid",
+																							null);
+																					put("peroxomonophosphoric acid",
+																							null);
+																					put("pyrophosphoric acid",
+																							null);
+																					put("hypophosphorous acid",
+																							null);
+																					put("hexachloroplatinum acid",
+																							null);
+																					put("plumbous acid",
+																							null);
+																					put("plumbic acid",
+																							null);
+																					put("perrhenic acid",
+																							null);
+																					put("rhenic acid",
+																							null);
+																					put("ruthenic acid");
+																					put("hydrogen sulfide");
+																					put("sulfurous acid");
+																					put("sulfuric acid");
+																					put("peroxymonosulfuric acid");
+																					put("thiosulfurous acid");
+																					put("thiosulfuric acid");
+																					put("dithionous acid");
+																					put("dithionic acid");
+																					put("disulfuric acid");
+																					put("peroxydisulfuric acid");
+																					put("tetra-sulfoxylic acid");
+																					put("antimonious acid");
+																					put("antimonic acid");
+																					put("hexahydrooxoantimonic acid");
+																					put("selenious acid");
+																					put("selenic acid");
+																					put("hydrofluosilicic acid");
+																					put("metasilicic acid");
+																					put("orthosilicic acid");
+																					put("stannic acid");
+																					put("metastannic acid");
+																					put("pertechnetic acid");
+																					put("technetic acid");
+																					put("hydrogen tulluride");
+																					put("tellurious acid");
+																					put("telluric acid");
+																					put("orthotellruic acid");
+																					put("metatitanic acid");
+																					put("orthotitanic acid");
+																					put("vanadic acid");
+																					put("tungstic acid");
+																					put("uranic acid");
+																					put("zinc acid");
+																				}
+																			};
+
 	public static final CaseInsensitiveMap		CHEMICALS					= new CaseInsensitiveMap() {
 																				/**
 		 * 
@@ -304,6 +465,11 @@ public class Constants {
 	public static final String					WEBWISER_ROOT				= "http://webwiser.nlm.nih.gov/knownSubstanceSearch.do?method=search&currentSearchText=&currentSearchBy=CAS_RN&currentGoToItem=1&currentPageSize=20&appMode=3&searchBy=CAS_RN&Search=Search&goToItem=1&pageSize=20&searchText=";
 	public static final String					CIR_URL_FORMAT				= "http://cactus.nci.nih.gov/chemical/structure/%s/%s";
 	public static final ArrayList<ChemicalMass>	LD50_LEVELS					= new ArrayList<ChemicalMass>() {
+																				/**
+		 * 
+		 */
+																				private static final long	serialVersionUID	= -7810118873846034946L;
+
 																				{
 																					add(new ChemicalMass(
 																							5,

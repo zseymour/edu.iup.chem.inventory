@@ -53,15 +53,9 @@ import org.jdesktop.swingx.JXPanel;
  * @author Amy Fowler
  */
 public class Stacker extends JLayeredPane {
-	/**
-	 * 
-	 */
-	private static final long	serialVersionUID	= -6717879330735766650L;
-	private final Component		master;										// dictates
-																				// sizing,
-																				// scrolling
-	private JPanel				messageLayer;
-	private JXPanel				messageAlpha;
+	private final Component	master;		// dictates sizing, scrolling
+	private JPanel			messageLayer;
+	private JXPanel			messageAlpha;
 
 	public Stacker(final Component master) {
 		this.master = master;
@@ -138,7 +132,7 @@ public class Stacker extends JLayeredPane {
 						new PropertySetter(messageAlpha, "alpha", 0.0f,
 								finalAlpha));
 				animator.setStartDelay(200);
-				animator.setAcceleration(.2f);
+				animator.setAcceleration(.02f);
 				animator.setDeceleration(.5f);
 				animator.start();
 			}

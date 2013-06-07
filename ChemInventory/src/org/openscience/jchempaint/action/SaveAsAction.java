@@ -41,9 +41,9 @@ import javax.swing.filechooser.FileFilter;
 
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IChemModel;
 import org.openscience.cdk.interfaces.IChemObject;
-import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.io.CDKSourceCodeWriter;
 import org.openscience.cdk.io.CMLWriter;
 import org.openscience.cdk.io.IChemObjectWriter;
@@ -52,6 +52,7 @@ import org.openscience.cdk.io.MDLV2000Writer;
 import org.openscience.cdk.io.RGroupQueryWriter;
 import org.openscience.cdk.io.SMILESWriter;
 import org.openscience.cdk.io.listener.SwingGUIListener;
+import org.openscience.cdk.io.setting.IOSetting;
 import org.openscience.cdk.isomorphism.matchers.IRGroupQuery;
 import org.openscience.cdk.tools.manipulator.ChemModelManipulator;
 import org.openscience.jchempaint.AbstractJChemPaintPanel;
@@ -165,84 +166,79 @@ public class SaveAsAction extends JCPAction {
 							GT._("No file type chosen"),
 							JOptionPane.INFORMATION_MESSAGE);
 					return;
+				}
+				type = ((IJCPFileFilter) currentFilter).getType();
+				File outFile = chooser.getSelectedFile();
+				if (outFile.exists()) {
+					ready = JOptionPane
+							.showConfirmDialog(
+									(Component) null,
+									GT._("File {0} already exists. Do you want to overwrite it?",
+											outFile.getName()), GT
+											._("File already exists"),
+									JOptionPane.YES_NO_OPTION);
 				} else {
-					type = ((IJCPFileFilter) currentFilter).getType();
-					File outFile = chooser.getSelectedFile();
-					if (outFile.exists()) {
-						ready = JOptionPane
-								.showConfirmDialog(
-										(Component) null,
-										GT._("File {0} already exists. Do you want to overwrite it?",
-												outFile.getName()), GT
-												._("File already exists"),
-										JOptionPane.YES_NO_OPTION);
-					} else {
-						try {
-							if (new File(outFile.getCanonicalFile() + "."
-									+ type).exists()) {
-								ready = JOptionPane
-										.showConfirmDialog(
-												(Component) null,
-												GT._("File {0} already exists. Do you want to overwrite it?",
-														outFile.getName()),
-												GT._("File already exists"),
-												JOptionPane.YES_NO_OPTION);
-							}
-						} catch (final Throwable ex) {
-							jcpPanel.announceError(ex);
+					try {
+						if (new File(outFile.getCanonicalFile() + "." + type)
+								.exists()) {
+							ready = JOptionPane
+									.showConfirmDialog(
+											(Component) null,
+											GT._("File {0} already exists. Do you want to overwrite it?",
+													outFile.getName()), GT
+													._("File already exists"),
+											JOptionPane.YES_NO_OPTION);
 						}
-						ready = 0;
+					} catch (final Throwable ex) {
+						jcpPanel.announceError(ex);
 					}
-					if (ready == 0) {
+					ready = 0;
+				}
+				if (ready == 0) {
 
-						if (object == null) {
-							// called from main menu, only possibility
-							try {
-								if (type.equals(JCPSaveFileFilter.mol)) {
-									outFile = saveAsMol(model, outFile);
-								} else if (type.equals(JCPSaveFileFilter.inchi)) {
-									// outFile = saveAsInChI(model, outFile);
-								} else if (type.equals(JCPSaveFileFilter.cml)) {
-									outFile = saveAsCML2(model, outFile);
-								} else if (type
-										.equals(JCPSaveFileFilter.smiles)) {
-									outFile = saveAsSMILES(model, outFile);
-								} else if (type.equals(JCPSaveFileFilter.cdk)) {
-									outFile = saveAsCDKSourceCode(model,
-											outFile);
-								} else if (type.equals(JCPSaveFileFilter.rxn)) {
-									outFile = saveAsRXN(model, outFile);
-								} else {
-									final String error = GT
-											._("Cannot save file in this format:")
-											+ " " + type;
-									logger.error(error);
-									JOptionPane.showMessageDialog(jcpPanel,
-											error);
-									return;
-								}
-								jcpPanel.setModified(false);
-							} catch (final Exception exc) {
+					if (object == null) {
+						// called from main menu, only possibility
+						try {
+							if (type.equals(JCPSaveFileFilter.mol)) {
+								outFile = saveAsMol(model, outFile);
+							} else if (type.equals(JCPSaveFileFilter.inchi)) {
+
+							} else if (type.equals(JCPSaveFileFilter.cml)) {
+								outFile = saveAsCML2(model, outFile);
+							} else if (type.equals(JCPSaveFileFilter.smiles)) {
+								outFile = saveAsSMILES(model, outFile);
+							} else if (type.equals(JCPSaveFileFilter.cdk)) {
+								outFile = saveAsCDKSourceCode(model, outFile);
+							} else if (type.equals(JCPSaveFileFilter.rxn)) {
+								outFile = saveAsRXN(model, outFile);
+							} else {
 								final String error = GT
-										._("Error while writing file")
-										+ ": "
-										+ exc.getMessage();
+										._("Cannot save file in this format:")
+										+ " " + type;
 								logger.error(error);
-								logger.debug(exc);
 								JOptionPane.showMessageDialog(jcpPanel, error);
+								return;
 							}
+							jcpPanel.setModified(false);
+						} catch (final Exception exc) {
+							final String error = GT
+									._("Error while writing file")
+									+ ": "
+									+ exc.getMessage();
+							logger.error(error);
+							logger.debug(exc);
+							JOptionPane.showMessageDialog(jcpPanel, error);
 						}
-						jcpPanel.setCurrentWorkDirectory(chooser
-								.getCurrentDirectory());
-						jcpPanel.setCurrentSaveFileFilter(chooser
-								.getFileFilter());
-						jcpPanel.setIsAlreadyAFile(outFile);
-						if (outFile != null) {
-							jcpPanel.getChemModel().setID(outFile.getName());
-							if (jcpPanel instanceof JChemPaintPanel) {
-								((JChemPaintPanel) jcpPanel).setTitle(outFile
-										.getName());
-							}
+					}
+					jcpPanel.setCurrentWorkDirectory(chooser
+							.getCurrentDirectory());
+					jcpPanel.setCurrentSaveFileFilter(chooser.getFileFilter());
+					jcpPanel.setIsAlreadyAFile(outFile);
+					if (outFile != null) {
+						jcpPanel.getChemModel().setID(outFile.getName());
+						if (jcpPanel instanceof JChemPaintPanel) {
+							((JChemPaintPanel) jcpPanel).setTitle(outFile
+									.getName());
 						}
 					}
 				}
@@ -260,7 +256,8 @@ public class SaveAsAction extends JCPAction {
 		}
 		cow = new CDKSourceCodeWriter(new FileWriter(outFile));
 		if (cow != null && askIOSettings()) {
-			cow.addChemObjectIOListener(new SwingGUIListener(jcpPanel, 4));
+			cow.addChemObjectIOListener(new SwingGUIListener(jcpPanel,
+					IOSetting.Importance.HIGH));
 		}
 		final Iterator containers = ChemModelManipulator.getAllAtomContainers(
 				model).iterator();
@@ -296,7 +293,8 @@ public class SaveAsAction extends JCPAction {
 		final FileWriter sw = new FileWriter(outFile);
 		cow = new CMLWriter(sw);
 		if (cow != null && askIOSettings()) {
-			cow.addChemObjectIOListener(new SwingGUIListener(jcpPanel, 4));
+			cow.addChemObjectIOListener(new SwingGUIListener(jcpPanel,
+					IOSetting.Importance.HIGH));
 		}
 		cow.write(object);
 		cow.close();
@@ -305,36 +303,6 @@ public class SaveAsAction extends JCPAction {
 			((JChemPaintPanel) jcpPanel).setTitle(jcpPanel.getChemModel()
 					.getID());
 		}
-		return outFile;
-	}
-
-	protected File saveAsInChI(final IChemObject object, File outFile)
-			throws Exception {
-		logger.info("Saving the contents in an InChI textfile...");
-		String fileName = outFile.toString();
-		if (!fileName.endsWith(".txt")) {
-			fileName += ".txt";
-			outFile = new File(fileName);
-		}
-		// BufferedWriter out = new BufferedWriter(new FileWriter(outFile));
-		// StdInChIGenerator inchiGen = new StdInChIGenerator();
-		//
-		// String eol=System.getProperty("line.separator");
-		// if (object instanceof IChemModel) {
-		// IMoleculeSet mSet = ((IChemModel) object).getMoleculeSet();
-		// for (IAtomContainer atc : mSet.atomContainers()) {
-		// out.write(inchiGen.generateInchi(atc).getInChI()+eol);
-		// out.write(inchiGen.generateInchi(atc).getAuxInfo()+eol);
-		// out.write(inchiGen.generateInchi(atc).getKey()+eol);
-		// }
-		// }
-		// else if (object instanceof IAtomContainer) {
-		// IAtomContainer atc = (IAtomContainer) object;
-		// out.write(inchiGen.generateInchi(atc).getInChI()+eol);
-		// out.write(inchiGen.generateInchi(atc).getAuxInfo()+eol);
-		// out.write(inchiGen.generateInchi(atc).getKey()+eol);
-		// }
-		// out.close();
 		return outFile;
 	}
 
@@ -495,12 +463,13 @@ public class SaveAsAction extends JCPAction {
 		}
 		cow = new SMILESWriter(new FileWriter(outFile));
 		if (cow != null && askIOSettings()) {
-			cow.addChemObjectIOListener(new SwingGUIListener(jcpPanel, 4));
+			cow.addChemObjectIOListener(new SwingGUIListener(jcpPanel,
+					IOSetting.Importance.HIGH));
 		}
 		final Iterator<IAtomContainer> containers = ChemModelManipulator
 				.getAllAtomContainers(model).iterator();
-		final IMoleculeSet som = model.getBuilder().newInstance(
-				IMoleculeSet.class);
+		final IAtomContainerSet som = model.getBuilder().newInstance(
+				IAtomContainerSet.class);
 		while (containers.hasNext()) {
 			// Clone() is here because the SMILESWriter sets valencies and we
 			// don't

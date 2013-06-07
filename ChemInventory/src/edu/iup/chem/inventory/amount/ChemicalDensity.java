@@ -35,7 +35,11 @@ public class ChemicalDensity extends ChemicalAmount {
 
 	@Override
 	public String toString() {
-		return String.valueOf(quantity) + " " + unit;
+		double printQuantity = quantity;
+		if (unit.equals("specific gravity")) {
+			printQuantity /= 1000;
+		}
+		return String.format("%.2f", printQuantity) + " " + unit;
 	}
 
 }

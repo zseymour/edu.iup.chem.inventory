@@ -3,8 +3,33 @@
  */
 package edu.iup.chem.inventory.db.inventory.tables.records;
 
+import java.awt.Desktop;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import javax.measure.quantity.Mass;
+import javax.measure.quantity.Temperature;
+
+import org.apache.commons.io.IOUtils;
+import org.jscience.physics.amount.Amount;
+import org.jscience.physics.amount.AmountFormat;
+import org.openscience.cdk.DefaultChemObjectBuilder;
+import org.openscience.cdk.formula.MolecularFormula;
+import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
+
+import edu.iup.chem.inventory.Utils;
+import edu.iup.chem.inventory.amount.ChemicalAmountFactory;
 import edu.iup.chem.inventory.amount.ChemicalDensity;
+import edu.iup.chem.inventory.amount.ChemicalMass;
 import edu.iup.chem.inventory.dao.ChemicalDao;
+import edu.iup.chem.inventory.db.inventory.enums.ChemicalCold;
+import edu.iup.chem.inventory.db.inventory.enums.ChemicalFlamm;
+import edu.iup.chem.inventory.db.inventory.enums.ChemicalStorageClass;
+import edu.iup.chem.inventory.search.ChemicalSubstructureSearcher;
 import edu.iup.chem.inventory.search.ChemicalWebSearch;
 
 /**
@@ -19,8 +44,27 @@ public class ChemicalRecord
 	private SynonymRecord		names				= null;
 
 	private ChemicalDensity		density				= null;
-	private Double				bp					= null;
-	private Double				mp					= null;
+	private ChemicalMass		ld50				= null;
+	private Amount<Temperature>	bp					= null;
+	private Amount<Temperature>	mp					= null;
+	private Amount<Mass>		molar				= null;
+	private MolecularFormula	molFormula			= null;
+	private IAtomContainer		molecule			= null;
+	private final AmountFormat	formatter			= AmountFormat
+															.getExactDigitsInstance();
+	private final String		densityResponse		= null;
+	private String				meltingResponse		= null;
+	private String				boilingResponse		= null;
+	private final String		ld50response		= null;
+	private boolean				densityChecked		= false;
+	private boolean				meltingChecked		= false;
+	private boolean				boilingChecked		= false;
+	private boolean				completionChecked	= false;
+	private boolean				complete			= false;
+	private boolean				ld50Checked;
+	private Amount<Temperature>	fp					= null;
+	private String				flashResponse		= null;
+	private boolean				flashChecked		= false;
 
 	/**
 	 * Create a detached ChemicalRecord
@@ -30,11 +74,40 @@ public class ChemicalRecord
 	}
 
 	public Double getBoilingPoint() {
-		if (bp == null) {
-			bp = ChemicalWebSearch.fetchBoilingPoint(getCas());
+		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.BOILING_POINT);
+	}
+
+	public String getBoilingPointString() {
+		if (!boilingChecked || !complete) {
+			if (bp == null && !boilingChecked) {
+				if (getBoilingPoint() == null) {
+					final double boiling = ChemicalWebSearch
+							.fetchBoilingPoint(getCas());
+					if (boiling == Double.MAX_VALUE) {
+						boilingResponse = "Unknown";
+					} else {
+						setBoilingPoint(boiling);
+						ChemicalDao.store(this);
+						boilingResponse = String
+								.format("%.1f %s", bp.getEstimatedValue(), bp
+										.getUnit().toString());
+					}
+				} else {
+					bp = Amount.valueOf(getBoilingPoint(),
+							javax.measure.unit.SI.CELSIUS);
+					boilingResponse = String.format("%.1f %s",
+							bp.getEstimatedValue(), bp.getUnit().toString());
+				}
+			} else if (bp != null) {
+				boilingResponse = String.format("%.1f %s",
+						bp.getEstimatedValue(), bp.getUnit().toString());
+			} else {
+				boilingResponse = "Unknown";
+			}
+			boilingChecked = true;
 		}
 
-		return bp;
+		return boilingResponse;
 	}
 
 	/**
@@ -53,11 +126,19 @@ public class ChemicalRecord
 		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.CAS);
 	}
 
+	public Integer getCid() {
+		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.CID);
+	}
+
 	/**
 	 * The table column <code>inventory.chemical.cold</code>
 	 */
 	public edu.iup.chem.inventory.db.inventory.enums.ChemicalCold getCold() {
 		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.COLD);
+	}
+
+	public Byte getComplete() {
+		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.COMPLETE);
 	}
 
 	/**
@@ -67,9 +148,33 @@ public class ChemicalRecord
 		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.CSID);
 	}
 
-	public ChemicalDensity getDensity() {
-		if (density == null) {
-			density = ChemicalWebSearch.fetchDensity(getCas());
+	public Double getDensity() {
+		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.DENSITY);
+	}
+
+	public String getDensityUnits() {
+		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.DENSITY_UNITS);
+	}
+
+	public ChemicalDensity getDensityWithUnits() {
+		if (!densityChecked || !complete) {
+			densityChecked = true;
+			if (density == null) {
+				if (getDensity() == null || getDensity() == 1.0
+						|| getDensityUnits() == null) {
+					density = ChemicalWebSearch.fetchDensity(getCas());
+					setDensity(density.getQuantity());
+					setDensityUnits(density.getUnit());
+					ChemicalDao.store(this);
+				} else {
+					if (getDensityUnits().equals("specific gravity")) {
+						setDensityWithUnits(getDensity() / 1000,
+								getDensityUnits());
+					} else {
+						setDensityWithUnits(getDensity(), getDensityUnits());
+					}
+				}
+			}
 		}
 
 		return density;
@@ -82,11 +187,67 @@ public class ChemicalRecord
 		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.FLAMM);
 	}
 
+	public Double getFlashPoint() {
+		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.FLASH_POINT);
+	}
+
+	public String getFlashPointString() {
+		if (!flashChecked || !complete) {
+			if (fp == null && !flashChecked) {
+				if (getFlashPoint() == null) {
+					final double flash = ChemicalWebSearch
+							.fetchFlashPoint(getCas());
+					if (flash == Double.MAX_VALUE) {
+						flashResponse = "Unknown";
+					} else {
+						setFlashPoint(flash);
+						ChemicalDao.store(this);
+						flashResponse = String
+								.format("%.1f %s", fp.getEstimatedValue(), fp
+										.getUnit().toString());
+					}
+				} else {
+					fp = Amount.valueOf(getFlashPoint(),
+							javax.measure.unit.NonSI.FAHRENHEIT);
+					flashResponse = String.format("%.1f %s",
+							fp.getEstimatedValue(), fp.getUnit().toString());
+				}
+			} else if (fp != null) {
+				flashResponse = String.format("%.1f %s",
+						fp.getEstimatedValue(), fp.getUnit().toString());
+			} else {
+				flashResponse = "Unknown";
+			}
+			flashChecked = true;
+		}
+
+		return flashResponse;
+	}
+
 	/**
 	 * The table column <code>inventory.chemical.formula</code>
 	 */
 	public java.lang.String getFormula() {
 		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.FORMULA);
+	}
+
+	public String getFormulaHTML() {
+		final MolecularFormula mol = getMolecularFormula();
+
+		if (mol == null) {
+			return "None";
+		}
+		return MolecularFormulaManipulator.getHTML(mol);
+	}
+
+	public String getFormulaString() {
+		final MolecularFormula mol = getMolecularFormula();
+
+		if (mol == null) {
+			return "None";
+		}
+
+		return MolecularFormulaManipulator.getString(mol);
 	}
 
 	/**
@@ -96,12 +257,155 @@ public class ChemicalRecord
 		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.INCHI);
 	}
 
-	public Double getMeltingPoint() {
-		if (mp == null) {
-			mp = ChemicalWebSearch.fetchMeltingPoint(getCas());
+	public Double getLd50() {
+		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.LD50);
+	}
+
+	public String getLd50units() {
+		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.LD50UNITS);
+	}
+
+	public ChemicalMass getLd50WithUnits() {
+		if (!ld50Checked || complete) {
+			ld50Checked = true;
+			if (ld50 == null) {
+				if (getLd50() == null || getLd50() == 0.0
+						|| getLd50units() == null) {
+					ld50 = ChemicalWebSearch.getLD50(getCas());
+					setLd50(ld50.getQuantity());
+					setLd50units(ld50.getUnit());
+					setToxic(ChemicalWebSearch.amountToToxicity(ld50));
+					ChemicalDao.store(this);
+				} else {
+					ld50 = (ChemicalMass) ChemicalAmountFactory
+							.getChemicalAmount(getLd50(), getLd50units());
+				}
+			}
 		}
 
-		return mp;
+		return ld50;
+	}
+
+	public Double getMeltingPoint() {
+		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.MELTING_POINT);
+	}
+
+	public String getMeltingPointString() {
+		if (!meltingChecked || !complete) {
+
+			if (mp == null && !meltingChecked) {
+				if (getMeltingPoint() == null) {
+					final double melting = ChemicalWebSearch
+							.fetchMeltingPoint(getCas());
+					if (melting == Double.MAX_VALUE) {
+						meltingResponse = "Unknown";
+					} else {
+						setMeltingPoint(melting);
+						ChemicalDao.store(this);
+						meltingResponse = String
+								.format("%.1f %s", mp.getEstimatedValue(), mp
+										.getUnit().toString());
+					}
+				} else {
+					mp = Amount.valueOf(getMeltingPoint(),
+							javax.measure.unit.SI.CELSIUS);
+					meltingResponse = String.format("%.1f %s",
+							mp.getEstimatedValue(), mp.getUnit().toString());
+				}
+			} else if (mp != null) {
+				meltingResponse = String.format("%.1f %s",
+						mp.getEstimatedValue(), mp.getUnit().toString());
+			} else {
+				meltingResponse = "Unknown";
+			}
+			meltingChecked = true;
+		}
+
+		return meltingResponse;
+	}
+
+	public String getMolarMass() {
+		if (molar == null) {
+			final double mass = MolecularFormulaManipulator
+					.getNaturalExactMass(getMolecularFormula());
+			molar = Amount.valueOf(mass, javax.measure.unit.SI.GRAM);
+		}
+		final String massStr = String.format("%.4f %s",
+				molar.getEstimatedValue(), molar.getUnit().toString());
+		return massStr;
+	}
+
+	private MolecularFormula getMolecularFormula() {
+		if (molFormula == null) {
+			if (getFormula().equals("N/A")) {
+				molFormula = null;
+			} else {
+				try {
+					molFormula = (MolecularFormula) MolecularFormulaManipulator
+							.getMolecularFormula(getFormula(),
+									DefaultChemObjectBuilder.getInstance());
+				} catch (final NumberFormatException e) {
+					molFormula = null;
+				}
+			}
+		}
+
+		return molFormula;
+	}
+
+	public IAtomContainer getMolecule() {
+		if (molecule == null) {
+			molecule = ChemicalSubstructureSearcher
+					.getMoleculeFromSMILES(getSmiles());
+		}
+
+		return molecule;
+	}
+
+	public void getMSDS() {
+		// final JFileChooser chooser = new JFileChooser();
+		// final FileNameExtensionFilter filter = new FileNameExtensionFilter(
+		// "PDF files", "pdf");
+		// chooser.setFileFilter(filter);
+		// final int returnVal =
+		// chooser.showSaveDialog(chemicalTable.getParent());
+		// if (returnVal == JFileChooser.APPROVE_OPTION) {
+
+		try {
+			// final File selected = chooser.getSelectedFile();
+			// File f;
+			// if (selected.getCanonicalPath().endsWith("pdf")) {
+			// f = selected;
+			// } else {
+			// f = new File(selected.getAbsolutePath() + ".pdf");
+			// }
+			final File f = File.createTempFile("inventory", ".pdf");
+			final OutputStream outputStream = new FileOutputStream(f);
+			final InputStream inputStream = ChemicalDao.getMSDS(getCas());
+			if (inputStream != null) {
+				IOUtils.copy(inputStream, outputStream);
+				outputStream.close();
+				if (Desktop.isDesktopSupported()) {
+					try {
+						Desktop.getDesktop().open(f);
+					} catch (final IOException ex) {
+						Utils.showMessage("Error",
+								"Could not open PDF.  Perhaps no program is available?");
+					}
+				} else {
+					Utils.showMessage("Warning",
+							"Unable to open SDS, but it has been saved to disk at "
+									+ f.getAbsolutePath());
+				}
+			} else {
+				outputStream.close();
+				Utils.showMessage("No SDS",
+						"No SDS has been stored for this chemical.");
+			}
+		} catch (final IOException e) {
+			Utils.showMessage("Warning",
+					"Failed to load SDS from database. Please try again.");
+		}
 	}
 
 	/**
@@ -144,14 +448,21 @@ public class ChemicalRecord
 			names = ChemicalDao.getNames(getCas());
 		}
 
-		return names.getNames();
+		final String syns = names.getNames();
+
+		return syns == null ? "none" : syns;
 	}
 
 	/**
 	 * The table column <code>inventory.chemical.smiles</code>
 	 */
 	public java.lang.String getSmiles() {
-		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.SMILES);
+		String smiles = getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.SMILES);
+		if (smiles == null || smiles.isEmpty()) {
+			smiles = "N/A";
+		}
+
+		return smiles;
 	}
 
 	/**
@@ -166,6 +477,40 @@ public class ChemicalRecord
 	 */
 	public edu.iup.chem.inventory.db.inventory.enums.ChemicalToxic getToxic() {
 		return getValue(edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.TOXIC);
+	}
+
+	public boolean isColdStorage() {
+		return getCold().equals(ChemicalCold.Yes);
+	}
+
+	public boolean isComplete() {
+		if (!completionChecked) {
+			completionChecked = true;
+			if (getComplete() == 0) {
+				complete = !(getLd50WithUnits().getQuantity() == 0.0)
+						&& !getStorageClass().equals(
+								ChemicalStorageClass.Unknown)
+						&& !getMeltingPointString().equals("Unknown")
+						&& !getBoilingPointString().equals("Unknown")
+						&& !getFlashPointString().equals("Unknown")
+						&& ChemicalDao.hasMSDS(getCas());
+				Byte value;
+				if (complete) {
+					value = 1;
+					setComplete(value);
+					ChemicalDao.store(this);
+					completionChecked = true;
+				}
+			} else {
+				complete = true;
+			}
+		}
+
+		return complete;
+	}
+
+	public boolean isFlammable() {
+		return getFlamm().equals(ChemicalFlamm.Yes);
 	}
 
 	public String log() {
@@ -190,6 +535,29 @@ public class ChemicalRecord
 				+ (getInchi() != null ? "getInchi()=" + getInchi() : "") + "]";
 	}
 
+	public void recheckComplete() {
+		completionChecked = false;
+
+	}
+
+	public void setBoilingPoint(final Double value) {
+		if (value != null) {
+			bp = Amount.valueOf(value, javax.measure.unit.SI.CELSIUS);
+			boilingResponse = String.format("%.1f %s", bp.getEstimatedValue(),
+					bp.getUnit().toString());
+		}
+		setValue(
+				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.BOILING_POINT,
+				value);
+
+		if (bp != null && bp.getMaximumValue() < 36.0) {
+			setCold(ChemicalCold.Yes);
+		}
+
+		boilingChecked = false;
+		completionChecked = false;
+	}
+
 	/**
 	 * The table column <code>inventory.chemical.carc</code>
 	 */
@@ -211,6 +579,20 @@ public class ChemicalRecord
 				value);
 	}
 
+	public void setChemicalDensity(final ChemicalDensity value) {
+		density = value;
+		setDensity(value.getQuantity());
+		setDensityUnits(value.getUnit());
+		densityChecked = false;
+
+	}
+
+	public void setCid(final Integer value) {
+		setValue(
+				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.CID,
+				value);
+	}
+
 	/**
 	 * The table column <code>inventory.chemical.cold</code>
 	 */
@@ -219,6 +601,15 @@ public class ChemicalRecord
 		setValue(
 				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.COLD,
 				value);
+	}
+
+	public void setComplete(final Byte value) {
+
+		setValue(
+				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.COMPLETE,
+				value);
+		completionChecked = false;
+
 	}
 
 	/**
@@ -230,6 +621,23 @@ public class ChemicalRecord
 				value);
 	}
 
+	public void setDensity(final Double value) {
+		setValue(
+				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.DENSITY,
+				value);
+	}
+
+	public void setDensityUnits(final String value) {
+		setValue(
+				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.DENSITY_UNITS,
+				value);
+	}
+
+	public void setDensityWithUnits(final Double value, final String units) {
+		density = (ChemicalDensity) ChemicalAmountFactory.getChemicalAmount(
+				value, units);
+	}
+
 	/**
 	 * The table column <code>inventory.chemical.flamm</code>
 	 */
@@ -238,6 +646,24 @@ public class ChemicalRecord
 		setValue(
 				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.FLAMM,
 				value);
+	}
+
+	public void setFlashPoint(final Double value) {
+		if (value != null) {
+			fp = Amount.valueOf(value, javax.measure.unit.NonSI.FAHRENHEIT);
+			flashResponse = String.format("%.1f %s", fp.getEstimatedValue(), fp
+					.getUnit().toString());
+		}
+		setValue(
+				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.FLASH_POINT,
+				value);
+
+		if (fp != null && fp.getMaximumValue() < 100.4) {
+			setFlamm(ChemicalFlamm.Yes);
+		}
+
+		flashChecked = false;
+		completionChecked = false;
 	}
 
 	/**
@@ -258,6 +684,52 @@ public class ChemicalRecord
 				value);
 	}
 
+	public void setLd50(final Double value) {
+		setValue(
+				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.LD50,
+				value);
+	}
+
+	public void setLd50units(final String value) {
+		setValue(
+				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.LD50UNITS,
+				value);
+	}
+
+	public void setLd50WithUnits(final ChemicalMass value) {
+		ld50 = value;
+		setLd50(value.getQuantity());
+		setLd50units(value.getUnit());
+		setToxic(ChemicalWebSearch.amountToToxicity(ld50));
+		ld50Checked = false;
+
+	}
+
+	public void setMeltingPoint(final Double value) {
+		if (value != null) {
+			mp = Amount.valueOf(value, javax.measure.unit.SI.CELSIUS);
+			meltingResponse = String.format("%.1f %s", mp.getEstimatedValue(),
+					mp.getUnit().toString());
+		}
+		setValue(
+				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.MELTING_POINT,
+				value);
+		meltingChecked = false;
+		completionChecked = false;
+
+	}
+
+	public void setMolecularFormula(final String formula) {
+		if (formula == null || formula.isEmpty()) {
+			molFormula = null;
+		} else {
+
+			molFormula = (MolecularFormula) MolecularFormulaManipulator
+					.getMolecularFormula(formula,
+							DefaultChemObjectBuilder.getInstance());
+		}
+	}
+
 	/**
 	 * The table column <code>inventory.chemical.name</code>
 	 */
@@ -271,27 +743,33 @@ public class ChemicalRecord
 	 * The table column <code>inventory.chemical.nfpa_f</code>
 	 */
 	public void setNfpaF(final java.lang.Integer value) {
-		setValue(
-				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.NFPA_F,
-				value);
+		if (value != null) {
+			setValue(
+					edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.NFPA_F,
+					value);
+		}
 	}
 
 	/**
 	 * The table column <code>inventory.chemical.nfpa_h</code>
 	 */
 	public void setNfpaH(final java.lang.Integer value) {
-		setValue(
-				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.NFPA_H,
-				value);
+		if (value != null) {
+			setValue(
+					edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.NFPA_H,
+					value);
+		}
 	}
 
 	/**
 	 * The table column <code>inventory.chemical.nfpa_r</code>
 	 */
 	public void setNfpaR(final java.lang.Integer value) {
-		setValue(
-				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.NFPA_R,
-				value);
+		if (value != null) {
+			setValue(
+					edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.NFPA_R,
+					value);
+		}
 	}
 
 	/**
@@ -321,6 +799,7 @@ public class ChemicalRecord
 		setValue(
 				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.STORAGE_CLASS,
 				value);
+		completionChecked = false;
 	}
 
 	/**
@@ -331,6 +810,7 @@ public class ChemicalRecord
 		setValue(
 				edu.iup.chem.inventory.db.inventory.tables.Chemical.CHEMICAL.TOXIC,
 				value);
+		completionChecked = false;
 	}
 
 	@Override

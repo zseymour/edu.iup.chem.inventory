@@ -44,21 +44,20 @@ import java.lang.reflect.Constructor;
 import javax.swing.JOptionPane;
 import javax.vecmath.Point2d;
 
+import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.ChemFile;
 import org.openscience.cdk.ChemModel;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.Molecule;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.geometry.GeometryTools;
 import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IChemFile;
 import org.openscience.cdk.interfaces.IChemModel;
 import org.openscience.cdk.interfaces.IChemObject;
-import org.openscience.cdk.interfaces.IMolecule;
-import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.interfaces.IReaction;
 import org.openscience.cdk.io.CMLReader;
 import org.openscience.cdk.io.IChemObjectWriter;
@@ -76,9 +75,9 @@ import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import org.openscience.cdk.tools.manipulator.AtomContainerSetManipulator;
 import org.openscience.cdk.tools.manipulator.ChemFileManipulator;
 import org.openscience.cdk.tools.manipulator.ChemModelManipulator;
-import org.openscience.cdk.tools.manipulator.MoleculeSetManipulator;
 import org.openscience.cdk.tools.manipulator.ReactionManipulator;
 import org.openscience.jchempaint.GT;
 import org.openscience.jchempaint.JChemPaintPanel;
@@ -115,8 +114,8 @@ public class CopyPasteAction extends JCPAction {
 
 		@SuppressWarnings("unchecked")
 		public JcpSelection(final IAtomContainer tocopy1) {
-			final IMolecule tocopy = tocopy1.getBuilder().newInstance(
-					IMolecule.class, tocopy1);
+			final IAtomContainer tocopy = tocopy1.getBuilder().newInstance(
+					IAtomContainer.class, tocopy1);
 			// MDL mol output
 			StringWriter sw = new StringWriter();
 			try {
@@ -316,7 +315,7 @@ public class CopyPasteAction extends JCPAction {
 											.getConnectedAtomContainer()
 											.getBuilder()
 											.newInstance(
-													IMolecule.class,
+													IAtomContainer.class,
 													renderModel
 															.getSelection()
 															.getConnectedAtomContainer()))),
@@ -428,16 +427,16 @@ public class CopyPasteAction extends JCPAction {
 						content.getBytes()));
 			}
 
-			IMolecule toPaste = null;
+			IAtomContainer toPaste = null;
 			boolean rgrpQuery = false;
 			if (reader != null) {
-				final IMolecule readMolecule = chemModel.getBuilder()
-						.newInstance(IMolecule.class);
+				final IAtomContainer readAtomContainer = chemModel.getBuilder()
+						.newInstance(IAtomContainer.class);
 				try {
-					if (reader.accepts(Molecule.class)) {
-						toPaste = reader.read(readMolecule);
+					if (reader.accepts(AtomContainer.class)) {
+						toPaste = reader.read(readAtomContainer);
 					} else if (reader.accepts(ChemFile.class)) {
-						toPaste = readMolecule;
+						toPaste = readAtomContainer;
 						final IChemFile file = reader.read(new ChemFile());
 						for (final IAtomContainer ac : ChemFileManipulator
 								.getAllAtomContainers(file)) {
@@ -468,7 +467,7 @@ public class CopyPasteAction extends JCPAction {
 					&& supported(transfer, DataFlavor.stringFlavor)) {
 				try {
 					if (content.toLowerCase().indexOf("inchi") > -1) {
-						// toPaste = (IMolecule) new
+						// toPaste = (IAtomContainer) new
 						// StdInChIParser().parseInchi(content);
 					} else {
 						final SmilesParser sp = new SmilesParser(
@@ -479,11 +478,11 @@ public class CopyPasteAction extends JCPAction {
 						toPaste = new FixBondOrdersTool()
 								.kekuliseAromaticRings(toPaste);
 
-						final IMoleculeSet mols = ConnectivityChecker
+						final IAtomContainerSet mols = ConnectivityChecker
 								.partitionIntoMolecules(toPaste);
 						for (int i = 0; i < mols.getAtomContainerCount(); i++) {
 							final StructureDiagramGenerator sdg = new StructureDiagramGenerator(
-									mols.getMolecule(i));
+									mols.getAtomContainer(i));
 
 							sdg.setTemplateHandler(new TemplateHandler(toPaste
 									.getBuilder()));
@@ -612,7 +611,7 @@ public class CopyPasteAction extends JCPAction {
 				final IReaction reaction = (IReaction) object;
 				final IAtomContainer wholeModel = jcpPanel.getChemModel()
 						.getBuilder().newInstance(IAtomContainer.class);
-				for (final IAtomContainer container : MoleculeSetManipulator
+				for (final IAtomContainer container : AtomContainerSetManipulator
 						.getAllAtomContainers(reaction.getReactants())) {
 					wholeModel.add(container);
 				}
@@ -633,7 +632,7 @@ public class CopyPasteAction extends JCPAction {
 				final IReaction reaction = (IReaction) object;
 				final IAtomContainer wholeModel = jcpPanel.getChemModel()
 						.getBuilder().newInstance(IAtomContainer.class);
-				for (final IAtomContainer container : MoleculeSetManipulator
+				for (final IAtomContainer container : AtomContainerSetManipulator
 						.getAllAtomContainers(reaction.getProducts())) {
 					wholeModel.add(container);
 				}
@@ -703,7 +702,7 @@ public class CopyPasteAction extends JCPAction {
 	 * @param renderModel
 	 *            The current renderer model.
 	 */
-	private void insertStructure(final IMolecule toPaste,
+	private void insertStructure(final IAtomContainer toPaste,
 			final RendererModel renderModel) {
 
 		// add implicit hs
@@ -759,7 +758,7 @@ public class CopyPasteAction extends JCPAction {
 	 * 
 	 * @param topaste
 	 */
-	private void scaleStructure(final IMolecule topaste) {
+	private void scaleStructure(final IAtomContainer topaste) {
 		final double bondLengthModel = jcpPanel.get2DHub()
 				.calculateAverageBondLength(
 						jcpPanel.get2DHub().getIChemModel().getMoleculeSet());

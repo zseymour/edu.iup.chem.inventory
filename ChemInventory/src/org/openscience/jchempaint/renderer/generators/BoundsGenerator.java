@@ -19,18 +19,16 @@
  */
 package org.openscience.jchempaint.renderer.generators;
 
-
 import java.awt.geom.Rectangle2D;
 
-import org.openscience.cdk.interfaces.IMolecule;
-import org.openscience.cdk.interfaces.IMoleculeSet;
+import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IReaction;
 import org.openscience.jchempaint.renderer.Renderer;
 import org.openscience.jchempaint.renderer.RendererModel;
 import org.openscience.jchempaint.renderer.elements.ElementGroup;
 import org.openscience.jchempaint.renderer.elements.IRenderingElement;
 import org.openscience.jchempaint.renderer.elements.RectangleElement;
-
 
 /**
  * Produce a bounding rectangle for various chem objects.
@@ -39,42 +37,41 @@ import org.openscience.jchempaint.renderer.elements.RectangleElement;
  * @cdk.module renderextra
  */
 public class BoundsGenerator implements IReactionGenerator {
-    
-    public BoundsGenerator() {}
-    
-    public IRenderingElement generate(IReaction reaction, RendererModel model) {
-        ElementGroup elementGroup = new ElementGroup();
-        IMoleculeSet reactants = reaction.getReactants();
-        if (reactants != null) {
-            elementGroup.add(this.generate(reactants, model));
-        }
-        
-        IMoleculeSet products = reaction.getProducts();
-        if (products != null) {
-            elementGroup.add(this.generate(products, model));
-        }
-        
-        return elementGroup;
-    }
-    
-    public IRenderingElement generate(IMolecule molecule, RendererModel model) {
-        Rectangle2D bounds = Renderer.calculateBounds(molecule);
-        return new RectangleElement(bounds.getMinX(),
-                bounds.getMaxY(),
-                bounds.getMaxX(),
-                bounds.getMinY(),
-                model.getBoundsColor());
-    }
-    
-    public IRenderingElement generate(
-            IMoleculeSet moleculeSet, RendererModel model) {
-        Rectangle2D totalBounds = Renderer.calculateBounds(moleculeSet);
-        
-        return new RectangleElement(totalBounds.getMinX(),
-                                    totalBounds.getMaxY(),
-                                    totalBounds.getMaxX(),
-                                    totalBounds.getMinY(),
-                                    model.getBoundsColor());
-    }
+
+	public BoundsGenerator() {
+	}
+
+	public IRenderingElement generate(final IAtomContainer molecule,
+			final RendererModel model) {
+		final Rectangle2D bounds = Renderer.calculateBounds(molecule);
+		return new RectangleElement(bounds.getMinX(), bounds.getMaxY(),
+				bounds.getMaxX(), bounds.getMinY(), model.getBoundsColor());
+	}
+
+	public IRenderingElement generate(final IAtomContainerSet moleculeSet,
+			final RendererModel model) {
+		final Rectangle2D totalBounds = Renderer.calculateBounds(moleculeSet);
+
+		return new RectangleElement(totalBounds.getMinX(),
+				totalBounds.getMaxY(), totalBounds.getMaxX(),
+				totalBounds.getMinY(), model.getBoundsColor());
+	}
+
+	@Override
+	public IRenderingElement generate(final IReaction reaction,
+			final RendererModel model) {
+		final ElementGroup elementGroup = new ElementGroup();
+		final IAtomContainerSet reactants = reaction.getReactants();
+		if (reactants != null) {
+			elementGroup.add(this.generate(reactants, model));
+		}
+
+		final IAtomContainerSet products = reaction.getProducts();
+		if (products != null) {
+			elementGroup.add(this.generate(products, model));
+		}
+
+		return elementGroup;
+	}
 
 }

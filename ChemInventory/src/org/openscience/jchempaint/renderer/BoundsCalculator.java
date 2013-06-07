@@ -28,8 +28,8 @@ import javax.vecmath.Point2d;
 
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IChemModel;
-import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.interfaces.IReaction;
 import org.openscience.cdk.interfaces.IReactionSet;
 
@@ -38,88 +38,91 @@ import org.openscience.cdk.interfaces.IReactionSet;
  */
 public class BoundsCalculator {
 
-	public static Rectangle2D calculateBounds(IChemModel chemModel) {
-        IMoleculeSet moleculeSet = chemModel.getMoleculeSet();
-        IReactionSet reactionSet = chemModel.getReactionSet();
-        Rectangle2D totalBounds = null;
-        if (moleculeSet != null) {
-            totalBounds = calculateBounds(moleculeSet);
-        }
+	public static Rectangle2D calculateBounds(final IAtomContainer ac) {
+		// this is essential, otherwise a rectangle
+		// of (+INF, -INF, +INF, -INF) is returned!
+		if (ac == null || ac.getAtomCount() == 0) {
+			return new Rectangle2D.Double();
+		} else if (ac.getAtomCount() == 1) {
+			final Point2d p = ac.getAtom(0).getPoint2d();
+			return new Rectangle2D.Double(p.x, p.y, 0, 0);
+		}
 
-        if (reactionSet != null) {
-            if (totalBounds == null) {
-                totalBounds = calculateBounds(reactionSet);
-            } else {
-                totalBounds = totalBounds.createUnion(
-                        calculateBounds(reactionSet));
-            }
-        }
-        return totalBounds;
-    }
+		double xmin = Double.POSITIVE_INFINITY;
+		double xmax = Double.NEGATIVE_INFINITY;
+		double ymin = Double.POSITIVE_INFINITY;
+		double ymax = Double.NEGATIVE_INFINITY;
 
-    public static Rectangle2D calculateBounds(IReactionSet reactionSet) {
-        Rectangle2D totalBounds = new Rectangle2D.Double();
-        for (IReaction reaction : reactionSet.reactions()) {
-            Rectangle2D reactionBounds = calculateBounds(reaction);
-            if (totalBounds.isEmpty()) {
-                totalBounds = reactionBounds;
-            } else {
-                Rectangle2D.union(totalBounds, reactionBounds, totalBounds);
-            }
-        }
-        return totalBounds;
-    }
+		for (final IAtom atom : ac.atoms()) {
+			final Point2d p = atom.getPoint2d();
+			xmin = Math.min(xmin, p.x);
+			xmax = Math.max(xmax, p.x);
+			ymin = Math.min(ymin, p.y);
+			ymax = Math.max(ymax, p.y);
+		}
+		final double w = xmax - xmin;
+		final double h = ymax - ymin;
+		return new Rectangle2D.Double(xmin, ymin, w, h);
+	}
 
-    public static Rectangle2D calculateBounds(IReaction reaction) {
-        // get the participants in the reaction
-        IMoleculeSet reactants = reaction.getReactants();
-        IMoleculeSet products = reaction.getProducts();
-        if (reactants == null || products == null) return null;
+	public static Rectangle2D calculateBounds(
+			final IAtomContainerSet moleculeSet) {
+		Rectangle2D totalBounds = new Rectangle2D.Double();
+		for (int i = 0; i < moleculeSet.getAtomContainerCount(); i++) {
+			final IAtomContainer ac = moleculeSet.getAtomContainer(i);
+			final Rectangle2D acBounds = calculateBounds(ac);
+			if (totalBounds.isEmpty()) {
+				totalBounds = acBounds;
+			} else {
+				Rectangle2D.union(totalBounds, acBounds, totalBounds);
+			}
+		}
+		return totalBounds;
+	}
 
-        // determine the bounds of everything in the reaction
-        Rectangle2D reactantsBounds = calculateBounds(reactants);
-        return reactantsBounds.createUnion(calculateBounds(products));
-    }
+	public static Rectangle2D calculateBounds(final IChemModel chemModel) {
+		final IAtomContainerSet moleculeSet = chemModel.getMoleculeSet();
+		final IReactionSet reactionSet = chemModel.getReactionSet();
+		Rectangle2D totalBounds = null;
+		if (moleculeSet != null) {
+			totalBounds = calculateBounds(moleculeSet);
+		}
 
-    public static Rectangle2D calculateBounds(IMoleculeSet moleculeSet) {
-        Rectangle2D totalBounds = new Rectangle2D.Double();
-        for (int i = 0; i < moleculeSet.getAtomContainerCount(); i++) {
-            IAtomContainer ac = moleculeSet.getAtomContainer(i);
-            Rectangle2D acBounds = calculateBounds(ac);
-            if (totalBounds.isEmpty()) {
-                totalBounds = acBounds;
-            } else {
-                Rectangle2D.union(totalBounds, acBounds, totalBounds);
-            }
-        }
-        return totalBounds;
-    }
+		if (reactionSet != null) {
+			if (totalBounds == null) {
+				totalBounds = calculateBounds(reactionSet);
+			} else {
+				totalBounds = totalBounds
+						.createUnion(calculateBounds(reactionSet));
+			}
+		}
+		return totalBounds;
+	}
 
-    public static Rectangle2D calculateBounds(IAtomContainer ac) {
-        // this is essential, otherwise a rectangle
-        // of (+INF, -INF, +INF, -INF) is returned!
-        if (ac==null || ac.getAtomCount() == 0) {
-            return new Rectangle2D.Double();
-        } else if (ac.getAtomCount() == 1) {
-            Point2d p = ac.getAtom(0).getPoint2d();
-            return new Rectangle2D.Double(p.x, p.y, 0, 0);
-        }
+	public static Rectangle2D calculateBounds(final IReaction reaction) {
+		// get the participants in the reaction
+		final IAtomContainerSet reactants = reaction.getReactants();
+		final IAtomContainerSet products = reaction.getProducts();
+		if (reactants == null || products == null) {
+			return null;
+		}
 
-    	double xmin = Double.POSITIVE_INFINITY;
-    	double xmax = Double.NEGATIVE_INFINITY;
-    	double ymin = Double.POSITIVE_INFINITY;
-    	double ymax = Double.NEGATIVE_INFINITY;
+		// determine the bounds of everything in the reaction
+		final Rectangle2D reactantsBounds = calculateBounds(reactants);
+		return reactantsBounds.createUnion(calculateBounds(products));
+	}
 
-    	for (IAtom atom : ac.atoms()) {
-    		Point2d p = atom.getPoint2d();
-    		xmin = Math.min(xmin, p.x);
-    		xmax = Math.max(xmax, p.x);
-    		ymin = Math.min(ymin, p.y);
-    		ymax = Math.max(ymax, p.y);
-    	}
-    	double w = xmax - xmin;
-    	double h = ymax - ymin;
-    	return new Rectangle2D.Double(xmin, ymin, w, h);
-    }
+	public static Rectangle2D calculateBounds(final IReactionSet reactionSet) {
+		Rectangle2D totalBounds = new Rectangle2D.Double();
+		for (final IReaction reaction : reactionSet.reactions()) {
+			final Rectangle2D reactionBounds = calculateBounds(reaction);
+			if (totalBounds.isEmpty()) {
+				totalBounds = reactionBounds;
+			} else {
+				Rectangle2D.union(totalBounds, reactionBounds, totalBounds);
+			}
+		}
+		return totalBounds;
+	}
 
 }

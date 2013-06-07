@@ -23,6 +23,8 @@ public class ChemLoginService extends LoginService {
 			LOG.debug("New user (" + user.getName() + ") logged in with role "
 					+ user.getRoleName());
 			return true;
+		} else {
+			LOG.debug("Fetched user is null.");
 		}
 
 		return false;

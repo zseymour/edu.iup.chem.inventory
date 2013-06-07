@@ -22,6 +22,10 @@ public class CaseInsensitiveMap extends HashMap<String, String> {
 		return values;
 	}
 
+	public String put(final String key) {
+		return this.put(key, null);
+	}
+
 	@Override
 	public String put(final String key, final String value) {
 		return super.put(key.toLowerCase(), value);

@@ -10,6 +10,8 @@ import org.apache.log4j.Logger;
 
 import edu.iup.chem.inventory.Utils;
 import edu.iup.chem.inventory.amount.ChemicalAmount;
+import edu.iup.chem.inventory.amount.ChemicalAmountFactory;
+import edu.iup.chem.inventory.amount.InventoryAmount;
 import edu.iup.chem.inventory.dao.LocationDao;
 import edu.iup.chem.inventory.db.inventory.tables.records.LocationRecord;
 
@@ -30,7 +32,8 @@ public class LocationTableModel extends AbstractTableModel {
 	public static final int				AMOUNT_COLUMN		= 6;
 	public static final int				ARRIVAL_COLUMN		= 7;
 	public static final int				EXP_COLUMN			= 8;
-	public static final int				COLUMN_COUNT		= 9;
+	public static final int				ACTIVE_COLUMN		= 9;
+	public static final int				COLUMN_COUNT		= 10;
 
 	public void add(final List<LocationRecord> list) {
 		final int first = inventory.size();
@@ -53,8 +56,6 @@ public class LocationTableModel extends AbstractTableModel {
 	@Override
 	public Class getColumnClass(final int column) {
 		switch (column) {
-			case BOTTLE_COLUMN:
-				return Integer.class;
 			case CAS_COLUMN:
 				return String.class;
 			case ARRIVAL_COLUMN:
@@ -62,7 +63,9 @@ public class LocationTableModel extends AbstractTableModel {
 			case EXP_COLUMN:
 				return Date.class;
 			case AMOUNT_COLUMN:
-				return ChemicalAmount.class;
+				return InventoryAmount.class;
+			case ACTIVE_COLUMN:
+				return Boolean.class;
 			default:
 				return String.class;
 		}
@@ -84,11 +87,11 @@ public class LocationTableModel extends AbstractTableModel {
 
 		switch (column) {
 			case BOTTLE_COLUMN:
-				return rec.getBottleNo();
+				return rec.getBottle();
 			case CAS_COLUMN:
 				return rec.getCas();
 			case AMOUNT_COLUMN:
-				return rec.getChemicalAmount();
+				return rec.getInventoryAmount();
 			case ARRIVAL_COLUMN:
 				return rec.getArrival();
 			case EXP_COLUMN:
@@ -101,6 +104,8 @@ public class LocationTableModel extends AbstractTableModel {
 				return rec.getShelf();
 			case INSTRUCTOR_COLUMN:
 				return rec.getInstructor();
+			case ACTIVE_COLUMN:
+				return rec.getActive().equals((byte) 1);
 			default:
 				return null;
 		}
@@ -119,15 +124,18 @@ public class LocationTableModel extends AbstractTableModel {
 			case ARRIVAL_COLUMN:
 			case EXP_COLUMN:
 			case AMOUNT_COLUMN:
+			case ACTIVE_COLUMN:
 				return true;
 			default:
 				return false;
 		}
 	}
 
-	public void removeChemical(final int index) {
+	public void removeChemical(final int index, final boolean delete) {
 		final LocationRecord rec = inventory.get(index);
-		LocationDao.delete(rec);
+		if (delete) {
+			LocationDao.delete(rec);
+		}
 		inventory.remove(index);
 
 		fireTableRowsDeleted(index, index);
@@ -141,7 +149,7 @@ public class LocationTableModel extends AbstractTableModel {
 		try {
 			switch (column) {
 				case BOTTLE_COLUMN:
-					rec.setBottleNo((Integer) obj);
+					rec.setBottle((String) obj);
 					break;
 				case CAS_COLUMN:
 					rec.setCas((String) obj);
@@ -164,10 +172,17 @@ public class LocationTableModel extends AbstractTableModel {
 				case AMOUNT_COLUMN:
 					final ChemicalAmount am = (ChemicalAmount) obj;
 					if (am != null) {
-						rec.setAmount(am.getQuantity());
-						rec.setUnits(am.getUnit());
+						rec.setInventoryAmount(am);
 					} else {
-						rec.setAmount((double) 0);
+						rec.setInventoryAmount(ChemicalAmountFactory
+								.getChemicalAmount(0.0, "g"));
+					}
+					break;
+				case ACTIVE_COLUMN:
+					if ((boolean) obj) {
+						rec.setActive((byte) 1);
+					} else {
+						rec.setActive((byte) 0);
 					}
 					break;
 				default:

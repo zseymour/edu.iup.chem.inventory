@@ -32,13 +32,16 @@ package org.openscience.jchempaint;
 import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Image;
-import java.awt.image.*;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
+import java.awt.image.FilteredImageSource;
+import java.awt.image.ImageFilter;
+import java.awt.image.ImageProducer;
+import java.awt.image.RGBImageFilter;
 import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -71,50 +74,176 @@ import org.openscience.jchempaint.renderer.selection.LogicalSelection;
 
 /**
  * An abstract superclass for the viewer and editor panel.
- *
+ * 
  */
-public abstract class AbstractJChemPaintPanel extends JPanel{
+public abstract class AbstractJChemPaintPanel extends JPanel {
 
-    private static final long serialVersionUID = -6591788750314560180L;
-    // buttons/menus are remembered in here using the string from config files as key
-    Map<String, JButton> buttons=new HashMap<String, JButton>();
-    List<JMenuItem> menus=new ArrayList<JMenuItem>();
-    Map<String, JChemPaintPopupMenu> popupmenuitems=new HashMap<String, JChemPaintPopupMenu>();
-    protected InsertTextPanel insertTextPanel = null;
-    protected JCPStatusBar statusBar;
-    protected boolean showStatusBar = true;
-    protected String guistring;
-	protected RenderPanel renderPanel;
-    private FileFilter currentSaveFileFilter;
-    private FileFilter currentOpenFileFilter;
-    private File currentWorkDirectory;
-    private boolean showToolBar = true;
-    private boolean showMenuBar = true;
-    private boolean showInsertTextField = true;
-    private JMenuBar menu;
-    private JToolBar uppertoolbar;
-    private JToolBar lefttoolbar;
-    private JToolBar lowertoolbar;
-    private JToolBar righttoolbar;
-    protected JPanel topContainer = null;
-    protected JPanel centerContainer = null;
-    private JComponent lastActionButton;
-    protected JMenuItem undoMenu;
-    protected JMenuItem redoMenu;
-    protected JMenu atomMenu;
-    protected JMenu bondMenu;
-    protected JMenu rgroupMenu;
-    protected boolean debug=false;
-    protected boolean modified = false;
-    private File isAlreadyAFile;
-    private File lastOpenedFile;
-    protected JComponent lastSecondaryButton;
-	private static ILoggingTool logger =
-        LoggingToolFactory.createLoggingTool(AbstractJChemPaintPanel.class);
-    protected static String appTitle = "";
-    protected JCPMenuTextMaker menuTextMaker = null;
-    protected List<String> blacklist;
+	private static final long	serialVersionUID	= -6591788750314560180L;
 
+	public static String getAppTitle() {
+		return appTitle;
+	}
+
+	// buttons/menus are remembered in here using the string from config files
+	// as key
+	Map<String, JButton>				buttons				= new HashMap<String, JButton>();
+	List<JMenuItem>						menus				= new ArrayList<JMenuItem>();
+	Map<String, JChemPaintPopupMenu>	popupmenuitems		= new HashMap<String, JChemPaintPopupMenu>();
+	protected InsertTextPanel			insertTextPanel		= null;
+	protected JCPStatusBar				statusBar;
+	protected boolean					showStatusBar		= true;
+	protected String					guistring;
+	protected RenderPanel				renderPanel;
+	private FileFilter					currentSaveFileFilter;
+	private FileFilter					currentOpenFileFilter;
+	private File						currentWorkDirectory;
+	private boolean						showToolBar			= true;
+	private boolean						showMenuBar			= true;
+	private boolean						showInsertTextField	= true;
+	private JMenuBar					menu;
+	private JToolBar					uppertoolbar;
+	private JToolBar					lefttoolbar;
+	private JToolBar					lowertoolbar;
+	private JToolBar					righttoolbar;
+	protected JPanel					topContainer		= null;
+	protected JPanel					centerContainer		= null;
+	private JComponent					lastActionButton;
+	protected JMenuItem					undoMenu;
+	protected JMenuItem					redoMenu;
+	protected JMenu						atomMenu;
+	protected JMenu						bondMenu;
+	protected JMenu						rgroupMenu;
+	protected boolean					debug				= false;
+	protected boolean					modified			= false;
+	private File						isAlreadyAFile;
+	private File						lastOpenedFile;
+	protected JComponent				lastSecondaryButton;
+	private static ILoggingTool			logger				= LoggingToolFactory
+																	.createLoggingTool(AbstractJChemPaintPanel.class);
+	protected static String				appTitle			= "";
+	protected JCPMenuTextMaker			menuTextMaker		= null;
+
+	protected List<String>				blacklist;
+
+	/**
+	 * This method handles an error when we do not know what to do. It clearly
+	 * announces to the user that an error occured. This is preferable compared
+	 * to failing silently.
+	 * 
+	 * @param ex
+	 *            The throwable which occured.
+	 */
+	public void announceError(final Throwable ex) {
+		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		final PrintStream ps = new PrintStream(baos);
+		ex.printStackTrace(ps);
+		final String trace = baos.toString();
+
+		JOptionPane
+				.showMessageDialog(
+						this,
+						GT._("The error was:")
+								+ " "
+								+ ex.getMessage()
+								+ ". "
+								+ GT._("\nYou can file a bug report at ")
+								+ "https://github.com/JChemPaint/jchempaint/issues "
+								+ GT._("\nWe apologize for any inconvenience!")
+								+ trace, GT._("Error occured"),
+						JOptionPane.ERROR_MESSAGE);
+
+		logger.error(ex.getMessage());
+	}
+
+	public void customizeView() {
+		if (showMenuBar) {
+			if (menu == null) {
+				menu = new JChemPaintMenuBar(this, guistring, blacklist);
+			}
+			topContainer.add(menu, BorderLayout.NORTH);
+		} else {
+			topContainer.remove(menu);
+		}
+		if (showStatusBar) {
+			if (statusBar == null) {
+				statusBar = new JCPStatusBar();
+			}
+			add(statusBar, BorderLayout.SOUTH);
+		} else {
+			remove(statusBar);
+		}
+		if (showToolBar) {
+			if (uppertoolbar == null) {
+				uppertoolbar = JCPToolBar.getToolbar(this, "uppertoolbar",
+						SwingConstants.HORIZONTAL, blacklist);
+			}
+			if (uppertoolbar != null) {
+				topContainer.add(uppertoolbar, BorderLayout.SOUTH);
+			}
+			if (lefttoolbar == null) {
+				lefttoolbar = JCPToolBar.getToolbar(this, "lefttoolbar",
+						SwingConstants.VERTICAL, blacklist);
+			}
+			if (lefttoolbar != null) {
+				centerContainer.add(lefttoolbar, BorderLayout.WEST);
+			}
+			if (righttoolbar == null) {
+				righttoolbar = JCPToolBar.getToolbar(this, "righttoolbar",
+						SwingConstants.VERTICAL, blacklist);
+			}
+			if (righttoolbar != null) {
+				centerContainer.add(righttoolbar, BorderLayout.EAST);
+			}
+			if (lowertoolbar == null) {
+				lowertoolbar = JCPToolBar.getToolbar(this, "lowertoolbar",
+						SwingConstants.HORIZONTAL, blacklist);
+			}
+			if (lowertoolbar != null) {
+				centerContainer.add(lowertoolbar, BorderLayout.SOUTH);
+			}
+		} else {
+			topContainer.remove(uppertoolbar);
+			centerContainer.remove(lowertoolbar);
+			centerContainer.remove(lefttoolbar);
+			centerContainer.remove(righttoolbar);
+		}
+		if (showInsertTextField) {
+			if (insertTextPanel == null) {
+				insertTextPanel = new InsertTextPanel(this, null);
+			}
+			centerContainer.add(insertTextPanel, BorderLayout.NORTH);
+		} else {
+			centerContainer.remove(insertTextPanel);
+		}
+		revalidate();
+	}
+
+	/**
+	 * Enables or disables all JMenuItems in a JMenu.
+	 * 
+	 * @param root
+	 *            The JMenu to search in.
+	 * @param b
+	 *            Enable or disable.
+	 */
+	protected void enOrDisableMenus(final JMenu root, final boolean b) {
+		for (int i = 0; i < root.getItemCount(); i++) {
+			if (root.getItem(i) instanceof JMenu) {
+				((JMenu) root.getItem(i)).setEnabled(b);
+			} else if (root.getItem(i) instanceof JMenuItem) {
+				root.getItem(i).setEnabled(b);
+			}
+		}
+	}
+
+	/**
+	 * Return the ControllerHub of this JCPPanel
+	 * 
+	 * @return The ControllerHub
+	 */
+	public ControllerHub get2DHub() {
+		return renderPanel.getHub();
+	}
 
 	/**
 	 * The blacklist is a list of all elements which should not be shown.
@@ -123,6 +252,68 @@ public abstract class AbstractJChemPaintPanel extends JPanel{
 	 */
 	public List<String> getBlacklist() {
 		return blacklist;
+	}
+
+	/**
+	 * Returns the chemmodel used in this panel.
+	 * 
+	 * @return The chemmodel usedin this panel.
+	 */
+	public IChemModel getChemModel() {
+		return renderPanel.getChemModel();
+	}
+
+	/**
+	 * Gets the currentOpenFileFilter attribute of the JChemPaintPanel object
+	 * 
+	 * @return The currentOpenFileFilter value
+	 */
+	public FileFilter getCurrentOpenFileFilter() {
+		return currentOpenFileFilter;
+	}
+
+	/**
+	 * Gets the currentSaveFileFilter attribute of the JChemPaintPanel object
+	 * 
+	 * @return The currentSaveFileFilter value
+	 */
+	public FileFilter getCurrentSaveFileFilter() {
+		return currentSaveFileFilter;
+	}
+
+	/**
+	 * Gets the currentWorkDirectory attribute of the JChemPaintPanel object
+	 * 
+	 * @return The currentWorkDirectory value
+	 */
+	public File getCurrentWorkDirectory() {
+		return currentWorkDirectory;
+	}
+
+	public String getGuistring() {
+		return guistring;
+	}
+
+	/**
+	 * Helps in keeping the current action button highlighted
+	 * 
+	 * @return The last action button used
+	 */
+	public JComponent getLastActionButton() {
+		return lastActionButton;
+	}
+
+	/**
+	 * Gets the lastOpenedFile attribute of the JChemPaintPanel object
+	 * 
+	 * @return The lastOpenedFile value
+	 */
+	public File getLastOpenedFile() {
+		return lastOpenedFile;
+	}
+
+	public JCPMenuTextMaker getMenuTextMaker() {
+		return menuTextMaker;
 	}
 
 	/**
@@ -135,34 +326,41 @@ public abstract class AbstractJChemPaintPanel extends JPanel{
 	}
 
 	/**
-	 * Return the ControllerHub of this JCPPanel
+	 * Tells if the enter text field is currently shown or not.
 	 * 
-	 * @return The ControllerHub
+	 * @return text field shown or not
 	 */
-	public ControllerHub get2DHub() {
-		return renderPanel.getHub();
-	}
-	
-	/**
-	 * Returns the chemmodel used in this panel.
-	 * 
-	 * @return The chemmodel usedin this panel.
-	 */
-	public IChemModel getChemModel(){
-		return renderPanel.getChemModel();
+	public boolean getShowInsertTextField() {
+		return showInsertTextField;
 	}
 
 	/**
-	 * Sets the chemmodel used in this panel.
+	 * Tells if a menu is shown
 	 * 
-	 * @param model The chemmodel to use.
+	 * @return The showMenu value
 	 */
-	public void setChemModel(IChemModel model){
-		renderPanel.setChemModel(model);
-		//we need to do this to avoid npes later
-		renderPanel.getRenderer().getRenderer2DModel().setSelection(new LogicalSelection(LogicalSelection.Type.NONE));
+	public boolean getShowMenuBar() {
+		return showMenuBar;
 	}
-	
+
+	/**
+	 * Tells if a status bar is shown
+	 * 
+	 * @return The showStatusBar value
+	 */
+	public boolean getShowStatusBar() {
+		return showStatusBar;
+	}
+
+	/**
+	 * Returns the value of showToolbar.
+	 * 
+	 * @return The showToolbar value
+	 */
+	public boolean getShowToolBar() {
+		return showToolBar;
+	}
+
 	/**
 	 * Gives the smiles for the current chemmodel in this panel.
 	 * 
@@ -172,508 +370,354 @@ public abstract class AbstractJChemPaintPanel extends JPanel{
 	 * @throws IOException
 	 * @throws CloneNotSupportedException
 	 */
-	public String getSmiles() throws CDKException, ClassNotFoundException, IOException, CloneNotSupportedException{
+	public String getSmiles() throws CDKException, ClassNotFoundException,
+			IOException, CloneNotSupportedException {
 		return CreateSmilesAction.getSmiles(getChemModel());
-	}	
-    
-    /**
-     * This method handles an error when we do not know what to do. It clearly 
-     * announces to the user that an error occured. This is preferable compared 
-     * to failing silently.
-     * 
-     * @param ex The throwable which occured.
-     */
-    public void announceError(Throwable ex){
-    	ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    	PrintStream ps = new PrintStream(baos);
-    	ex.printStackTrace(ps);
-    	String trace = baos.toString();
+	}
 
-    	JOptionPane.showMessageDialog(this, 
-    			GT._("The error was:")+" "+ex.getMessage()+". "+GT._("\nYou can file a bug report at ")+
-    			"https://github.com/JChemPaint/jchempaint/issues "+
-    			GT._("\nWe apologize for any inconvenience!") + trace, GT._("Error occured"),
-    			JOptionPane.ERROR_MESSAGE);
-    	
-    	logger.error(ex.getMessage());
-    }
+	public String getSVGString() {
+		return renderPanel.toSVG();
+	}
 
-    /**
-     * Update the menu bars and toolbars to current language.
-     */
-    public void updateMenusWithLanguage() {
-        menuTextMaker.init(guistring);
-        Iterator<String> it = buttons.keySet().iterator();
-        while(it.hasNext()){
-            String key = it.next();
-            JButton button = buttons.get(key);
-            button.setToolTipText(menuTextMaker.getText(key + JCPAction.TIPSUFFIX));
-        }
-        Iterator<JMenuItem> it2 = menus.iterator();
-        while(it2.hasNext()){
-            JMenuItem button = it2.next();
-            button.setText(JCPMenuTextMaker.getInstance(guistring).getText(button.getName().charAt(button.getName().length()-1)=='2' ? button.getName().substring(0,button.getName().length()-1) : button.getName()));
-        }
-        it = popupmenuitems.keySet().iterator();
-        while(it.hasNext()){
-            String key = it.next();
-            JChemPaintPopupMenu button = popupmenuitems.get(key);
-            ((JMenuItem)button.getComponent(0)).setText(menuTextMaker.getText(key.substring(0,key.length()-5) + "MenuTitle"));
-        }
-        if(insertTextPanel!=null){
-            insertTextPanel.updateLanguage();
-        }
-        if(showStatusBar)
-            this.updateStatusBar();
-    }    
+	public Container getTopLevelContainer() {
+		Container parent = getParent();
+		while (parent.getParent() != null) {
+			parent = parent.getParent();
+		}
+		return parent;
+	}
 
-    /**
-     * Updates the status bar to the current values
-     */
-    public void updateStatusBar() {
-        if (showStatusBar) {
-            if (this.getChemModel() != null) {
-                for (int i = 0; i < 4; i++) {
-                    String status = renderPanel.getStatus(i);
-                    statusBar.setStatus(i + 1, status);
-                }
-            } else {
-                if (statusBar != null) {
-                    statusBar.setStatus(1, "no model");
-                }
-            }
-        }
-    }    
+	/**
+	 * Returns the file currently used for saving this Panel, null if not yet
+	 * saved
+	 * 
+	 * @return The currently used file
+	 */
+	public File isAlreadyAFile() {
+		return isAlreadyAFile;
+	}
 
-    public String getGuistring() {
-        return guistring;
-    }
+	/**
+	 * Tells if debug output is desired or not.
+	 * 
+	 * @return debug output or not.
+	 */
+	public boolean isDebug() {
+		return debug;
+	}
 
-    /**
-     * Called to force a re-centring of the displayed structure.
-     *
-     * @param isNewChemModel
-     */
-    public void setIsNewChemModel(boolean isNewChemModel) {
-        this.renderPanel.setIsNewChemModel(isNewChemModel);
-    }
-    
-    public Container getTopLevelContainer() {
-        Container parent = this.getParent();
-        while(parent.getParent()!=null)
-            parent = parent.getParent();
-        return parent;
-    }
+	public boolean isModified() {
+		return modified;
+	}
 
-    public String getSVGString() {
-        return this.renderPanel.toSVG();
-    }
+	public void setAppTitle(final String title) {
+		appTitle = title;
+	}
 
-    public Image takeSnapshot() {
-        return this.renderPanel.takeSnapshot();
-    }
+	/**
+	 * Sets the chemmodel used in this panel.
+	 * 
+	 * @param model
+	 *            The chemmodel to use.
+	 */
+	public void setChemModel(final IChemModel model) {
+		renderPanel.setChemModel(model);
+		// we need to do this to avoid npes later
+		renderPanel.getRenderer().getRenderer2DModel()
+				.setSelection(new LogicalSelection(LogicalSelection.Type.NONE));
+	}
 
-    public Image takeTransparentSnapshot() {
-        Image snapshot = takeSnapshot();
-        ImageFilter filter = new RGBImageFilter() {
-            // Alpha bits are set to opaque
-            public int markerRGB =
-                renderPanel.getRenderer().getRenderer2DModel().getBackColor().getRGB() | 0xFF000000;
+	/**
+	 * Sets the currentOpenFileFilter attribute of the JChemPaintPanel object
+	 * 
+	 * @param ff
+	 *            The new currentOpenFileFilter value
+	 */
+	public void setCurrentOpenFileFilter(final FileFilter ff) {
+		currentOpenFileFilter = ff;
+	}
 
-            public final int filterRGB(int x, int y, int rgb) {
-                if ( ( rgb | 0xFF000000 ) == markerRGB ) {
-                    // Mark the alpha bits as zero - transparent
-                    return 0x00FFFFFF & rgb;
-                } else {
-                    // nothing to do
-                    return rgb;
-                }
-            }
-        };
-        
-        ImageProducer ip = new FilteredImageSource(snapshot.getSource(), filter);
-        return Toolkit.getDefaultToolkit().createImage(ip);
-    }
+	/**
+	 * Sets the currentSaveFileFilter attribute of the JChemPaintPanel object
+	 * 
+	 * @param ff
+	 *            The new currentSaveFileFilter value
+	 */
+	public void setCurrentSaveFileFilter(final FileFilter ff) {
+		currentSaveFileFilter = ff;
+	}
 
-    /**
-     * Gets the currentOpenFileFilter attribute of the JChemPaintPanel object
-     *
-     *@return The currentOpenFileFilter value
-     */
-    public FileFilter getCurrentOpenFileFilter() {
-        return currentOpenFileFilter;
-    }
+	/**
+	 * Sets the currentWorkDirectory attribute of the JChemPaintPanel object
+	 * 
+	 * @param cwd
+	 *            The new currentWorkDirectory value
+	 */
+	public void setCurrentWorkDirectory(final File cwd) {
+		currentWorkDirectory = cwd;
+	}
 
-    /**
-     * Sets the currentOpenFileFilter attribute of the JChemPaintPanel object
-     *
-     *@param ff
-     *            The new currentOpenFileFilter value
-     */
-    public void setCurrentOpenFileFilter(FileFilter ff) {
-        this.currentOpenFileFilter = ff;
-    }
+	/**
+	 * Sets the file currently used for saving this Panel.
+	 * 
+	 * @param value
+	 *            The new isAlreadyAFile value
+	 */
+	public void setIsAlreadyAFile(final File value) {
+		isAlreadyAFile = value;
+	}
 
-    /**
-     * Gets the currentSaveFileFilter attribute of the JChemPaintPanel object
-     *
-     *@return The currentSaveFileFilter value
-     */
-    public FileFilter getCurrentSaveFileFilter() {
-        return currentSaveFileFilter;
-    }
+	/**
+	 * Called to force a re-centring of the displayed structure.
+	 * 
+	 * @param isNewChemModel
+	 */
+	public void setIsNewChemModel(final boolean isNewChemModel) {
+		renderPanel.setIsNewChemModel(isNewChemModel);
+	}
 
-    /**
-     * Sets the currentSaveFileFilter attribute of the JChemPaintPanel object
-     *
-     *@param ff
-     *            The new currentSaveFileFilter value
-     */
-    public void setCurrentSaveFileFilter(FileFilter ff) {
-        this.currentSaveFileFilter = ff;
-    }
+	/**
+	 * Helps in keeping the current action button highlighted - needs to be set
+	 * if a new action button is choosen
+	 * 
+	 * @param actionButton
+	 *            The new action button
+	 */
+	public void setLastActionButton(final JComponent actionButton) {
+		lastActionButton = actionButton;
+	}
 
-    /**
-     * Gets the currentWorkDirectory attribute of the JChemPaintPanel object
-     *
-     *@return The currentWorkDirectory value
-     */
-    public File getCurrentWorkDirectory() {
-        return currentWorkDirectory;
-    }
+	/**
+	 * Sets the lastOpenedFile attribute of the JChemPaintPanel object
+	 * 
+	 * @param lof
+	 *            The new lastOpenedFile value
+	 */
+	public void setLastOpenedFile(final File lof) {
+		lastOpenedFile = lof;
+	}
 
-    /**
-     * Sets the currentWorkDirectory attribute of the JChemPaintPanel object
-     *
-     *@param cwd
-     *            The new currentWorkDirectory value
-     */
-    public void setCurrentWorkDirectory(File cwd) {
-        this.currentWorkDirectory = cwd;
-    }
+	public void setLastSecondaryButton(final JComponent lastSecondaryButton) {
+		this.lastSecondaryButton = lastSecondaryButton;
+	}
 
-    /**
-     * Set to indicate whether the insert text field should be used.
-     *
-     * @param showInsertTextField
-     *            true is the text entry widget is to be shown
-     */
-    public void setShowInsertTextField(boolean showInsertTextField) {
-        this.showInsertTextField = showInsertTextField;
-        customizeView();
-    }
+	/**
+	 * Allows setting of the is modified stage (e. g. after save)
+	 * 
+	 * @param isModified
+	 *            is modified
+	 */
+	public void setModified(final boolean isModified) {
+		modified = isModified;
+		final Container c = getTopLevelContainer();
+		if (c instanceof JFrame) {
+			final String id = renderPanel.getChemModel().getID();
+			// String title = ((JFrame) c).getTitle();
+			if (isModified) {
+				((JFrame) c).setTitle('*' + id + getAppTitle());
+			} else {
+				((JFrame) c).setTitle(id + getAppTitle());
+			}
+		}
+	}
 
-    /**
-     * Tells if the enter text field is currently shown or not.
-     *
-     * @return text field shown or not
-     */
-    public boolean getShowInsertTextField() {
-        return showInsertTextField;
-    }
+	/**
+	 * Set to indicate whether the insert text field should be used.
+	 * 
+	 * @param showInsertTextField
+	 *            true is the text entry widget is to be shown
+	 */
+	public void setShowInsertTextField(final boolean showInsertTextField) {
+		this.showInsertTextField = showInsertTextField;
+		customizeView();
+	}
 
-    /**
-     * Tells if a menu is shown
-     *
-     *@return The showMenu value
-     */
-    public boolean getShowMenuBar() {
-        return showMenuBar;
-    }
+	/**
+	 * Sets if a menu is shown
+	 * 
+	 * @param showMenuBar
+	 *            The new showMenuBar value
+	 */
+	public void setShowMenuBar(final boolean showMenuBar) {
+		this.showMenuBar = showMenuBar;
+		customizeView();
+	}
 
-    /**
-     * Sets if a menu is shown
-     *
-     *@param showMenuBar
-     *            The new showMenuBar value
-     */
-    public void setShowMenuBar(boolean showMenuBar) {
-        this.showMenuBar = showMenuBar;
-        customizeView();
-    }
-    
-    /**
-     * Returns the value of showToolbar.
-     *
-     *@return The showToolbar value
-     */
-    public boolean getShowToolBar() {
-        return showToolBar;
-    }
+	/**
+	 * Sets if statusbar should be shown
+	 * 
+	 * @param showStatusBar
+	 *            The value to assign showStatusBar.
+	 */
+	public void setShowStatusBar(final boolean showStatusBar) {
+		this.showStatusBar = showStatusBar;
+		customizeView();
+	}
 
-    /**
-     * Sets if statusbar should be shown
-     *
-     *@param showStatusBar
-     *            The value to assign showStatusBar.
-     */
-    public void setShowStatusBar(boolean showStatusBar) {
-        this.showStatusBar = showStatusBar;
-        customizeView();
-    }
+	/**
+	 * Sets the value of showToolbar.
+	 * 
+	 * @param showToolBar
+	 *            The value to assign showToolbar.
+	 */
+	public void setShowToolBar(final boolean showToolBar) {
+		this.showToolBar = showToolBar;
+		customizeView();
+	}
 
-    /**
-     * Tells if a status bar is shown
-     *
-     *@return The showStatusBar value
-     */
-    public boolean getShowStatusBar() {
-        return showStatusBar;
-    }
-    
-    /**
-     * Sets the value of showToolbar.
-     *
-     *@param showToolBar
-     *            The value to assign showToolbar.
-     */
-    public void setShowToolBar(boolean showToolBar) {
-        this.showToolBar = showToolBar;
-        customizeView();
-    }
-    
-    public void customizeView() {
-        if (showMenuBar) {
-            if (menu == null) {
-                menu = new JChemPaintMenuBar(this, this.guistring, blacklist);
-            }
-            topContainer.add(menu, BorderLayout.NORTH);
-        } else {
-            topContainer.remove(menu);
-        }
-        if (showStatusBar) {
-            if (statusBar == null) {
-                statusBar = new JCPStatusBar();
-            }
-            add(statusBar, BorderLayout.SOUTH);
-        } else {
-            remove(statusBar);
-        }
-        if (showToolBar) {
-            if (uppertoolbar == null) {
-                uppertoolbar = JCPToolBar.getToolbar(this, "uppertoolbar", SwingConstants.HORIZONTAL, blacklist);
-            }
-            if (uppertoolbar != null) {
-                topContainer.add(uppertoolbar, BorderLayout.SOUTH);
-            }
-            if (lefttoolbar == null) {
-                lefttoolbar = JCPToolBar.getToolbar(this, "lefttoolbar", SwingConstants.VERTICAL, blacklist);
-            }
-            if (lefttoolbar != null) {
-                centerContainer.add(lefttoolbar, BorderLayout.WEST);
-            }
-            if (righttoolbar == null) {
-                righttoolbar = JCPToolBar.getToolbar(this, "righttoolbar", SwingConstants.VERTICAL, blacklist);
-            }
-            if (righttoolbar != null) {
-                centerContainer.add(righttoolbar, BorderLayout.EAST);
-            }
-            if (lowertoolbar == null) {
-                lowertoolbar = JCPToolBar.getToolbar(this, "lowertoolbar", SwingConstants.HORIZONTAL, blacklist);
-            }
-            if (lowertoolbar != null) {
-                centerContainer.add(lowertoolbar, BorderLayout.SOUTH);
-            }
-        } else {
-            topContainer.remove(uppertoolbar);
-            centerContainer.remove(lowertoolbar);
-            centerContainer.remove(lefttoolbar);
-            centerContainer.remove(righttoolbar);
-        }
-        if (showInsertTextField) {
-            if (insertTextPanel == null)
-                insertTextPanel = new InsertTextPanel(this, null);
-            centerContainer.add(insertTextPanel, BorderLayout.NORTH);
-        } else {
-            centerContainer.remove(insertTextPanel);
-        }
-        revalidate();
-    }
+	/**
+	 * Shows a warning if the JCPPanel has unsaved content and does save, if the
+	 * user wants to do it.
+	 * 
+	 * @return 
+	 *         OptionPane.YES_OPTION/OptionPane.NO_OPTION/OptionPane.CANCEL_OPTION
+	 */
+	public int showWarning() {
+		if (modified && !guistring.equals(JChemPaintEditorApplet.GUI_APPLET)) { // TODO
+																				// &&
+																				// !getIsOpenedByViewer())
+																				// {
+			int answer = JOptionPane
+					.showConfirmDialog(
+							this,
+							renderPanel.getChemModel().getID()
+									+ " "
+									+ GT._("has unsaved data. Do you want to save it?"),
+							GT._("Unsaved data"),
+							JOptionPane.YES_NO_CANCEL_OPTION,
+							JOptionPane.WARNING_MESSAGE);
+			if (answer == JOptionPane.YES_OPTION) {
+				final SaveAction saveaction = new SaveAction(this, false);
+				saveaction.actionPerformed(new ActionEvent(this, 12, ""));
+				if (saveaction.getWasCancelled()) {
+					answer = JOptionPane.CANCEL_OPTION;
+				}
+			}
+			return answer;
+		} else if (guistring.equals(JChemPaintEditorApplet.GUI_APPLET)) {
+			// In case of the applet we do not ask for save but put the clear
+			// into the undo stack
+			// ClearAllEdit coa = null;
+			// TODO undo redo missing coa = new
+			// ClearAllEdit(this.getChemModel(),(IMoleculeSet)this.getChemModel().getMoleculeSet().clone(),this.getChemModel().getReactionSet());
+			// this.jchemPaintModel.getControllerModel().getUndoSupport().postEdit(coa);
+			return JOptionPane.YES_OPTION;
+		} else {
+			return JOptionPane.YES_OPTION;
+		}
+	}
 
-    /**
-     * Helps in keeping the current action button highlighted - needs to be set
-     * if a new action button is choosen
-     *
-     * @param actionButton
-     *            The new action button
-     */
-    public void setLastActionButton(JComponent actionButton) {
-        lastActionButton = actionButton;
-    }
+	public Image takeSnapshot() {
+		return renderPanel.takeSnapshot();
+	}
 
-    /**
-     * Helps in keeping the current action button highlighted
-     *
-     * @return The last action button used
-     */
-    public JComponent getLastActionButton() {
-        return lastActionButton;
-    }
-    
-    /**
-     * Enables or disables all JMenuItems in a JMenu.
-     * 
-     * @param root  The JMenu to search in.
-     * @param b     Enable or disable.
-     */
-    protected void enOrDisableMenus(JMenu root, boolean b) {
-        for(int i=0;i<root.getItemCount();i++){
-            if(root.getItem(i) instanceof JMenu){
-                ((JMenu)root.getItem(i)).setEnabled(b);
-            }else if(root.getItem(i) instanceof JMenuItem){
-                ((JMenuItem)root.getItem(i)).setEnabled(b);
-            }
-        }
-    }
-    
-    /**
-     * Shows a warning if the JCPPanel has unsaved content and does save, if the
-     * user wants to do it.
-     *
-     * @return
-     *         OptionPane.YES_OPTION/OptionPane.NO_OPTION/OptionPane.CANCEL_OPTION
-     */
-    public int showWarning() {
-        if (modified && !guistring.equals(JChemPaintEditorApplet.GUI_APPLET)) { // TODO
-                                                                                  // &&
-                                                                                  // !getIsOpenedByViewer())
-                                                                                  // {
-            int answer = JOptionPane.showConfirmDialog(this, renderPanel
-                    .getChemModel().getID()
-                    + " " + GT._("has unsaved data. Do you want to save it?"),
-                    GT._("Unsaved data"), JOptionPane.YES_NO_CANCEL_OPTION,
-                    JOptionPane.WARNING_MESSAGE);
-            if (answer == JOptionPane.YES_OPTION) {
-                SaveAction saveaction = new SaveAction(this, false);
-                saveaction.actionPerformed(new ActionEvent(
-                        this, 12, ""));
-                if(saveaction.getWasCancelled())
-                    answer = JOptionPane.CANCEL_OPTION;
-            }
-            return answer;
-        } else if (guistring.equals(JChemPaintEditorApplet.GUI_APPLET)) {
-            // In case of the applet we do not ask for save but put the clear
-            // into the undo stack
-            // ClearAllEdit coa = null;
-            // TODO undo redo missing coa = new
-            // ClearAllEdit(this.getChemModel(),(IMoleculeSet)this.getChemModel().getMoleculeSet().clone(),this.getChemModel().getReactionSet());
-            // this.jchemPaintModel.getControllerModel().getUndoSupport().postEdit(coa);
-            return JOptionPane.YES_OPTION;
-        } else {
-            return JOptionPane.YES_OPTION;
-        }
-    }
+	public Image takeTransparentSnapshot() {
+		final Image snapshot = takeSnapshot();
+		final ImageFilter filter = new RGBImageFilter() {
+			// Alpha bits are set to opaque
+			public int	markerRGB	= renderPanel.getRenderer()
+											.getRenderer2DModel()
+											.getBackColor().getRGB() | 0xFF000000;
 
-    /**
-     * Tells if debug output is desired or not.
-     *
-     * @return debug output or not.
-     */
-    public boolean isDebug() {
-        return debug;
-    }
-    
-    /**
-     * Gets the lastOpenedFile attribute of the JChemPaintPanel object
-     *
-     *@return The lastOpenedFile value
-     */
-    public File getLastOpenedFile() {
-        return lastOpenedFile;
-    }
+			@Override
+			public final int filterRGB(final int x, final int y, final int rgb) {
+				if ((rgb | 0xFF000000) == markerRGB) {
+					// Mark the alpha bits as zero - transparent
+					return 0x00FFFFFF & rgb;
+				} else {
+					// nothing to do
+					return rgb;
+				}
+			}
+		};
 
-    /**
-     * Sets the lastOpenedFile attribute of the JChemPaintPanel object
-     *
-     *@param lof
-     *            The new lastOpenedFile value
-     */
-    public void setLastOpenedFile(File lof) {
-        this.lastOpenedFile = lof;
-    }
+		final ImageProducer ip = new FilteredImageSource(snapshot.getSource(),
+				filter);
+		return Toolkit.getDefaultToolkit().createImage(ip);
+	}
 
-    /**
-     * Sets the file currently used for saving this Panel.
-     *
-     *@param value
-     *            The new isAlreadyAFile value
-     */
-    public void setIsAlreadyAFile(File value) {
-        isAlreadyAFile = value;
-    }
+	/**
+	 * Update the menu bars and toolbars to current language.
+	 */
+	public void updateMenusWithLanguage() {
+		menuTextMaker.init(guistring);
+		Iterator<String> it = buttons.keySet().iterator();
+		while (it.hasNext()) {
+			final String key = it.next();
+			final JButton button = buttons.get(key);
+			button.setToolTipText(menuTextMaker.getText(key
+					+ JCPAction.TIPSUFFIX));
+		}
+		final Iterator<JMenuItem> it2 = menus.iterator();
+		while (it2.hasNext()) {
+			final JMenuItem button = it2.next();
+			button.setText(JCPMenuTextMaker
+					.getInstance(guistring)
+					.getText(
+							button.getName().charAt(
+									button.getName().length() - 1) == '2' ? button
+									.getName().substring(0,
+											button.getName().length() - 1)
+									: button.getName()));
+		}
+		it = popupmenuitems.keySet().iterator();
+		while (it.hasNext()) {
+			final String key = it.next();
+			final JChemPaintPopupMenu button = popupmenuitems.get(key);
+			((JMenuItem) button.getComponent(0)).setText(menuTextMaker
+					.getText(key.substring(0, key.length() - 5) + "MenuTitle"));
+		}
+		if (insertTextPanel != null) {
+			insertTextPanel.updateLanguage();
+		}
+		if (showStatusBar) {
+			updateStatusBar();
+		}
+	}
 
-    /**
-     * Returns the file currently used for saving this Panel, null if not yet
-     * saved
-     *
-     *@return The currently used file
-     */
-    public File isAlreadyAFile() {
-        return isAlreadyAFile;
-    }
+	/**
+	 * Updates the status bar to the current values
+	 */
+	public void updateStatusBar() {
+		if (showStatusBar) {
+			if (getChemModel() != null) {
+				for (int i = 0; i < 4; i++) {
+					final String status = renderPanel.getStatus(i);
+					statusBar.setStatus(i + 1, status);
+				}
+			} else {
+				if (statusBar != null) {
+					statusBar.setStatus(1, "no model");
+				}
+			}
+		}
+	}
 
-    public void setLastSecondaryButton(JComponent lastSecondaryButton) {
-        this.lastSecondaryButton = lastSecondaryButton;
-    }
+	public void updateUndoRedoControls() {
+		final UndoManager undoManager = renderPanel.getUndoManager();
+		final JButton redoButton = buttons.get("redo");
+		final JButton undoButton = buttons.get("undo");
+		if (undoManager.canRedo()) {
+			redoButton.setEnabled(true);
+			redoMenu.setEnabled(true);
+			redoButton.setToolTipText(GT._("Redo") + ": "
+					+ undoManager.getRedoPresentationName());
+		} else {
+			redoButton.setEnabled(false);
+			redoMenu.setEnabled(false);
+			redoButton.setToolTipText(GT._("No redo possible"));
+		}
 
-    public void updateUndoRedoControls() {
-        UndoManager undoManager = renderPanel.getUndoManager();
-        JButton redoButton=buttons.get("redo");
-        JButton undoButton=buttons.get("undo");
-        if (undoManager.canRedo()) {
-            redoButton.setEnabled(true);
-            redoMenu.setEnabled(true);
-            redoButton.setToolTipText(GT._("Redo")+": "+undoManager.getRedoPresentationName());
-        } else {
-            redoButton.setEnabled(false);
-            redoMenu.setEnabled(false);
-            redoButton.setToolTipText(GT._("No redo possible"));
-        }
-
-        if (undoManager.canUndo()) {
-            undoButton.setEnabled(true);
-            undoMenu.setEnabled(true);
-            undoButton.setToolTipText(GT._("Undo")+": "+undoManager.getUndoPresentationName());
-        } else {
-            undoButton.setEnabled(false);
-            undoMenu.setEnabled(false);
-            undoButton.setToolTipText(GT._("No undo possible"));
-        }
-    }
-
-    public static String getAppTitle() {
-        return appTitle;
-    }
-
-    public void setAppTitle(String title) {
-        appTitle = title;
-    }
-
-    /**
-     * Allows setting of the is modified stage (e. g. after save)
-     *
-     * @param isModified
-     *            is modified
-     */
-    public void setModified(boolean isModified) {
-        this.modified = isModified;
-        Container c = this.getTopLevelContainer();
-        if (c instanceof JFrame) {
-            String id = renderPanel.getChemModel().getID();
-            //String title = ((JFrame) c).getTitle();
-            if (isModified)
-                ((JFrame) c).setTitle('*' + id + this.getAppTitle());
-            else
-                ((JFrame) c).setTitle(id + this.getAppTitle());
-        }
-    }
-
-    public boolean isModified() {
-        return modified;
-    }
-
-    public JCPMenuTextMaker getMenuTextMaker() {
-        return menuTextMaker;
-    }
+		if (undoManager.canUndo()) {
+			undoButton.setEnabled(true);
+			undoMenu.setEnabled(true);
+			undoButton.setToolTipText(GT._("Undo") + ": "
+					+ undoManager.getUndoPresentationName());
+		} else {
+			undoButton.setEnabled(false);
+			undoMenu.setEnabled(false);
+			undoButton.setToolTipText(GT._("No undo possible"));
+		}
+	}
 
 }

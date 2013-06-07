@@ -24,40 +24,58 @@
 package org.openscience.jchempaint.controller.undoredo;
 
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IChemModel;
-import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.interfaces.IReactionSet;
 import org.openscience.jchempaint.controller.IChemModelRelay;
 
 /**
  * @cdk.module controlextra
- * @cdk.svnrev  $Revision: 10979 $
+ * @cdk.svnrev $Revision: 10979 $
  */
 public class LoadNewModelEdit implements IUndoRedoable {
 
-    private static final long serialVersionUID = -9022673628051651034L;
-    
-    private IChemModel chemModel;
-	private IMoleculeSet oldsom;
-	private IReactionSet oldsor;
-	private IMoleculeSet newsom;
-	private IReactionSet newsor;
-	private String type;
-	private IChemModelRelay chemModelRelay = null;
+	private static final long		serialVersionUID	= -9022673628051651034L;
 
-	public LoadNewModelEdit(IChemModel chemModel, IChemModelRelay relay, IMoleculeSet oldsom, IReactionSet oldsor, IMoleculeSet newsom, IReactionSet newsor, String type) {
+	private final IChemModel		chemModel;
+	private final IAtomContainerSet	oldsom;
+	private final IReactionSet		oldsor;
+	private final IAtomContainerSet	newsom;
+	private final IReactionSet		newsor;
+	private final String			type;
+	private IChemModelRelay			chemModelRelay		= null;
+
+	public LoadNewModelEdit(final IChemModel chemModel,
+			final IChemModelRelay relay, final IAtomContainerSet oldsom,
+			final IReactionSet oldsor, final IAtomContainerSet newsom,
+			final IReactionSet newsor, final String type) {
 		this.chemModel = chemModel;
-		this.newsom=newsom;
-		this.newsor=newsor;
-		this.oldsom=oldsom;
-		this.oldsor=oldsor;
-		this.type=type;
-		this.chemModelRelay = relay;
+		this.newsom = newsom;
+		this.newsor = newsor;
+		this.oldsom = oldsom;
+		this.oldsor = oldsor;
+		this.type = type;
+		chemModelRelay = relay;
 	}
 
+	@Override
+	public boolean canRedo() {
+		return true;
+	}
+
+	@Override
+	public boolean canUndo() {
+		return true;
+	}
+
+	public String getPresentationName() {
+		return type;
+	}
+
+	@Override
 	public void redo() {
 		if (chemModelRelay != null) {
-			for (IAtomContainer ac : newsom.atomContainers()) {
+			for (final IAtomContainer ac : newsom.atomContainers()) {
 				chemModelRelay.updateAtoms(ac, ac.atoms());
 			}
 		}
@@ -65,25 +83,14 @@ public class LoadNewModelEdit implements IUndoRedoable {
 		chemModel.setReactionSet(newsor);
 	}
 
+	@Override
 	public void undo() {
 		if (chemModelRelay != null) {
-			for (IAtomContainer ac : oldsom.atomContainers()) {
+			for (final IAtomContainer ac : oldsom.atomContainers()) {
 				chemModelRelay.updateAtoms(ac, ac.atoms());
 			}
 		}
 		chemModel.setMoleculeSet(oldsom);
 		chemModel.setReactionSet(oldsor);
-	}
-
-	public boolean canRedo() {
-		return true;
-	}
-
-	public boolean canUndo() {
-		return true;
-	}
-	
-	public String getPresentationName() {
-		return type;
 	}
 }

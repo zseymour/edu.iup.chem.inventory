@@ -42,215 +42,216 @@ import org.openscience.jchempaint.renderer.elements.TextGroupElement.Position;
  * 
  * @author maclean
  * @cdk.module renderextra
- *
+ * 
  */
 public class ExtendedAtomGenerator extends BasicAtomGenerator {
-    
-    public IRenderingElement generate(
-            IAtomContainer ac, IAtom atom, RendererModel model) {
-        
-        Integer majorIsotopeNumber = null;
-        if(atom.getMassNumber()!=null){
-            try {
-    			IIsotope isotope = IsotopeFactory
-                    .getInstance(
-                            atom.getBuilder()).getMajorIsotope(
-                            atom.getSymbol());
-    			if(isotope!=null)
-    				majorIsotopeNumber = isotope.getMassNumber();
-    		} catch (IOException e) {
-    
-    		}
-        }
-        if ((!hasCoordinates(atom) 
-             || invisibleHydrogen(atom, model) 
-             || (invisibleCarbon(atom, ac, model) && !model.getDrawNumbers()))
-             && (atom.getMassNumber()==null 
-            		 || atom.getMassNumber()==majorIsotopeNumber)
-             && atom.getValency()==(Integer)CDKConstants.UNSET
-             && !atom.getFlag(CDKConstants.IS_TYPEABLE)) {
-            return null;
-        } else if (model.getIsCompact()) {
-            return this.generateCompactElement(atom, model);
-        } else {
-            String text;
-            if (atom instanceof IPseudoAtom) {
-                text = ((IPseudoAtom) atom).getLabel();
-            } else if (invisibleCarbon(atom, ac, model) && model.drawNumbers()) {
-                text = String.valueOf(ac.getAtomNumber(atom) + 1);
-            } else {
-                text = atom.getSymbol();
-            }
-            Point2d p = atom.getPoint2d();
-            Color c = getColorForAtom(atom, model);
-            TextGroupElement textGroup = new TextGroupElement(p.x, p.y, text, c);
-            if(atom.getFlag(CDKConstants.IS_TYPEABLE)){
-                textGroup.isNotTypeableUnderlined = true;
-                textGroup.notTypeableUnderlineColor = model.getNotTypeableUnderlineColor();
-            }
-            decorate(textGroup, ac, atom, model);
-            return textGroup;
-        }
-    }
-    
-    public boolean hideAtomSymbol(IAtom atom, RendererModel model) {
-        return atom.getSymbol().equals("C") && !model.getKekuleStructure();
-    }
-    
-    public void decorate(TextGroupElement textGroup, 
-                         IAtomContainer ac, 
-                         IAtom atom, 
-                         RendererModel model) {
-        Stack<Position> unused = getUnusedPositions(ac, atom);
-        
-        if (!invisibleCarbon(atom, ac, model) && model.getDrawNumbers()) {
-            Position position = getNextPosition(unused);
-            String number = String.valueOf(ac.getAtomNumber(atom) + 1);
-            textGroup.addChild(number, position);
-        }
-        
-        if (
-             (model.getShowImplicitHydrogens() && !invisibleCarbon(atom, ac, model))
-             ||
-             // Always show implicit hydrogens on end carbons
-             (atom.getSymbol().equals("C") && model.getShowEndCarbons() && ac.getConnectedBondsList(atom).size() == 1)
-            ) {
-        	if(atom.getImplicitHydrogenCount()!=null){
-	            int nH = atom.getImplicitHydrogenCount();
-	            if (nH > 0) {
-	                Position position = getNextPosition(unused);
-	                if (nH == 1) {
-	                    textGroup.addChild("H", position);
-	                } else {
-	                    textGroup.addChild("H", String.valueOf(nH), position);
-	                }
-	            }
-        	}
-        }
-        
-        Integer massNumber = atom.getMassNumber();
-        if (massNumber != null) {
-            try {
-                IsotopeFactory factory = 
-                    IsotopeFactory.getInstance(ac.getBuilder());
-                if(factory.getMajorIsotope(atom.getSymbol())!=null){
-	                int majorMass = 
-	                    factory.getMajorIsotope(atom.getSymbol()).getMassNumber();
-	                if (massNumber != majorMass) {
-	                    Position position = getNextPosition(unused);
-	                    textGroup.addChild(String.valueOf(massNumber), position);
-	                }
-                }
-            } catch (IOException io) {
-                
-            }
-        }
-        
-        if(atom.getFormalCharge()!=0){
-        	String chargeString="";
-	        if (atom.getFormalCharge() == 1) {
-	            chargeString = "+";
-	        } else if (atom.getFormalCharge() > 1) {
-	            chargeString = atom.getFormalCharge() + "+";
-	        } else if (atom.getFormalCharge() == -1) {
-	            chargeString = "-";
-	        } else if (atom.getFormalCharge() < -1) {
-	            int absCharge = Math.abs(atom.getFormalCharge());
-	            chargeString = absCharge + "-";
-	        }
-            Position position = getNextPosition(unused);
-            textGroup.addChild(chargeString, position);
-        }
 
-        if(atom.getValency()!=null){
-        	String valencyString="(v"+atom.getValency().toString()+")";
-            Position position = getNextPosition(unused);
-            textGroup.addChild(valencyString, position);
-        }
-    
-        if(atom.getProperty(CDKConstants.COMMENT)!=null){
-            //Position position = getNextPosition(unused);
-            textGroup.addChild((String)atom.getProperty(CDKConstants.COMMENT),Position.S,true);
-        }
+	public void decorate(final TextGroupElement textGroup,
+			final IAtomContainer ac, final IAtom atom, final RendererModel model) {
+		final Stack<Position> unused = getUnusedPositions(ac, atom);
 
-    }
-    
-    private Position getNextPosition(Stack<Position> unused) {
-        if (unused.size() > 0) {
-            return unused.pop();
-        } else {
-            return Position.N;
-        }
-    }
-    
-    public Stack<Position> getUnusedPositions(IAtomContainer ac, IAtom atom) {
-        Stack<Position> unused = new Stack<Position>();
-        for (Position p : Position.values()) {
-            unused.add(p);
-        }
-        
-        for (IAtom connectedAtom : ac.getConnectedAtomsList(atom)) {
-            List<Position> used = getPosition(atom, connectedAtom);
-            for(int i=0;i<used.size();i++){
-                unused.remove(used.get(i));
-            }
-        }
-        return unused;
-    }
-    
-    public List<Position> getPosition(IAtom atom, IAtom connectedAtom) {
-        Point2d pA = atom.getPoint2d();
-        Point2d pB = connectedAtom.getPoint2d();
-        double dx = pB.x - pA.x;
-        double dy = pB.y - pA.y;
-        List<Position> used=new ArrayList<Position>();
-        
-        final double DELTA = 0.2;
-        
-        if (dx < -DELTA) {                          // generally west
-            if (dy < -DELTA) {
-                used.add(Position.N);
-                used.add(Position.NW);
-                used.add(Position.W);
-            } else if (dy > -DELTA && dy < DELTA) {
-                used.add(Position.NW);
-                used.add(Position.W);
-                used.add(Position.SW);
-            } else {
-                used.add(Position.W);
-                used.add(Position.SW);
-                used.add(Position.S);
-            }
-        } else if (dx > -DELTA && dx < DELTA) {     //  north or south
-            if (dy < -DELTA) {
-                used.add(Position.NW);
-                used.add(Position.N);
-                used.add(Position.NE);
-            } else if (dy > -DELTA && dy < DELTA) { // right on top of the atom!
-                used.add(Position.NW);
-                used.add(Position.N);
-                used.add(Position.NE);
-            } else {
-                used.add(Position.SW);
-                used.add(Position.S);
-                used.add(Position.SE);
-            }
-        } else {                                    // generally east 
-            if (dy < -DELTA) {
-                used.add(Position.N);
-                used.add(Position.NE);
-                used.add(Position.E);
-            } else if (dy > -DELTA && dy < DELTA) {
-                used.add(Position.NE);
-                used.add(Position.E);
-                used.add(Position.SE);
-            } else {
-                used.add(Position.E);
-                used.add(Position.SE);
-                used.add(Position.S);
-            }
-        }
-        return used;
-    }
-    
+		if (!invisibleCarbon(atom, ac, model) && model.getDrawNumbers()) {
+			final Position position = getNextPosition(unused);
+			final String number = String.valueOf(ac.getAtomNumber(atom) + 1);
+			textGroup.addChild(number, position);
+		}
+
+		if (model.getShowImplicitHydrogens()
+				&& !invisibleCarbon(atom, ac, model)
+				||
+				// Always show implicit hydrogens on end carbons
+				atom.getSymbol().equals("C") && model.getShowEndCarbons()
+				&& ac.getConnectedBondsList(atom).size() == 1) {
+			if (atom.getImplicitHydrogenCount() != null) {
+				final int nH = atom.getImplicitHydrogenCount();
+				if (nH > 0) {
+					final Position position = getNextPosition(unused);
+					if (nH == 1) {
+						textGroup.addChild("H", position);
+					} else {
+						textGroup.addChild("H", String.valueOf(nH), position);
+					}
+				}
+			}
+		}
+
+		final Integer massNumber = atom.getMassNumber();
+		if (massNumber != null) {
+			try {
+				final IsotopeFactory factory = IsotopeFactory.getInstance(ac
+						.getBuilder());
+				if (factory.getMajorIsotope(atom.getSymbol()) != null) {
+					final int majorMass = factory.getMajorIsotope(
+							atom.getSymbol()).getMassNumber();
+					if (massNumber != majorMass) {
+						final Position position = getNextPosition(unused);
+						textGroup
+								.addChild(String.valueOf(massNumber), position);
+					}
+				}
+			} catch (final IOException io) {
+
+			}
+		}
+
+		if (atom.getFormalCharge() != 0) {
+			String chargeString = "";
+			if (atom.getFormalCharge() == 1) {
+				chargeString = "+";
+			} else if (atom.getFormalCharge() > 1) {
+				chargeString = atom.getFormalCharge() + "+";
+			} else if (atom.getFormalCharge() == -1) {
+				chargeString = "-";
+			} else if (atom.getFormalCharge() < -1) {
+				final int absCharge = Math.abs(atom.getFormalCharge());
+				chargeString = absCharge + "-";
+			}
+			final Position position = getNextPosition(unused);
+			textGroup.addChild(chargeString, position);
+		}
+
+		// if(atom.getValency()!=null){
+		// String valencyString="(v"+atom.getValency().toString()+")";
+		// Position position = getNextPosition(unused);
+		// textGroup.addChild(valencyString, position);
+		// }
+		//
+		// if(atom.getProperty(CDKConstants.COMMENT)!=null){
+		// //Position position = getNextPosition(unused);
+		// textGroup.addChild((String)atom.getProperty(CDKConstants.COMMENT),Position.S,true);
+		// }
+
+	}
+
+	@Override
+	public IRenderingElement generate(final IAtomContainer ac,
+			final IAtom atom, final RendererModel model) {
+
+		Integer majorIsotopeNumber = null;
+		if (atom.getMassNumber() != null) {
+			try {
+				final IIsotope isotope = IsotopeFactory.getInstance(
+						atom.getBuilder()).getMajorIsotope(atom.getSymbol());
+				if (isotope != null) {
+					majorIsotopeNumber = isotope.getMassNumber();
+				}
+			} catch (final IOException e) {
+
+			}
+		}
+		if ((!hasCoordinates(atom) || invisibleHydrogen(atom, model) || invisibleCarbon(
+				atom, ac, model) && !model.getDrawNumbers())
+				&& (atom.getMassNumber() == null || atom.getMassNumber() == majorIsotopeNumber)
+				&& atom.getValency() == (Integer) CDKConstants.UNSET
+				&& !atom.getFlag(CDKConstants.IS_TYPEABLE)) {
+			return null;
+		} else if (model.getIsCompact()) {
+			return generateCompactElement(atom, model);
+		} else {
+			String text = null;
+			if (atom instanceof IPseudoAtom) {
+				text = ((IPseudoAtom) atom).getLabel();
+			} else if (invisibleCarbon(atom, ac, model) && model.drawNumbers()) {
+				text = String.valueOf(ac.getAtomNumber(atom) + 1);
+			} else {
+				text = atom.getSymbol();
+			}
+			final Point2d p = atom.getPoint2d();
+			final Color c = getColorForAtom(atom, model);
+			final TextGroupElement textGroup = new TextGroupElement(p.x, p.y,
+					text, c);
+			if (atom.getFlag(CDKConstants.IS_TYPEABLE)) {
+				textGroup.isNotTypeableUnderlined = true;
+				textGroup.notTypeableUnderlineColor = model
+						.getNotTypeableUnderlineColor();
+			}
+			decorate(textGroup, ac, atom, model);
+			return textGroup;
+		}
+	}
+
+	private Position getNextPosition(final Stack<Position> unused) {
+		if (unused.size() > 0) {
+			return unused.pop();
+		} else {
+			return Position.N;
+		}
+	}
+
+	public List<Position> getPosition(final IAtom atom,
+			final IAtom connectedAtom) {
+		final Point2d pA = atom.getPoint2d();
+		final Point2d pB = connectedAtom.getPoint2d();
+		final double dx = pB.x - pA.x;
+		final double dy = pB.y - pA.y;
+		final List<Position> used = new ArrayList<Position>();
+
+		final double DELTA = 0.2;
+
+		if (dx < -DELTA) { // generally west
+			if (dy < -DELTA) {
+				used.add(Position.N);
+				used.add(Position.NW);
+				used.add(Position.W);
+			} else if (dy > -DELTA && dy < DELTA) {
+				used.add(Position.NW);
+				used.add(Position.W);
+				used.add(Position.SW);
+			} else {
+				used.add(Position.W);
+				used.add(Position.SW);
+				used.add(Position.S);
+			}
+		} else if (dx > -DELTA && dx < DELTA) { // north or south
+			if (dy < -DELTA) {
+				used.add(Position.NW);
+				used.add(Position.N);
+				used.add(Position.NE);
+			} else if (dy > -DELTA && dy < DELTA) { // right on top of the atom!
+				used.add(Position.NW);
+				used.add(Position.N);
+				used.add(Position.NE);
+			} else {
+				used.add(Position.SW);
+				used.add(Position.S);
+				used.add(Position.SE);
+			}
+		} else { // generally east
+			if (dy < -DELTA) {
+				used.add(Position.N);
+				used.add(Position.NE);
+				used.add(Position.E);
+			} else if (dy > -DELTA && dy < DELTA) {
+				used.add(Position.NE);
+				used.add(Position.E);
+				used.add(Position.SE);
+			} else {
+				used.add(Position.E);
+				used.add(Position.SE);
+				used.add(Position.S);
+			}
+		}
+		return used;
+	}
+
+	public Stack<Position> getUnusedPositions(final IAtomContainer ac,
+			final IAtom atom) {
+		final Stack<Position> unused = new Stack<Position>();
+		for (final Position p : Position.values()) {
+			unused.add(p);
+		}
+
+		for (final IAtom connectedAtom : ac.getConnectedAtomsList(atom)) {
+			final List<Position> used = getPosition(atom, connectedAtom);
+			for (int i = 0; i < used.size(); i++) {
+				unused.remove(used.get(i));
+			}
+		}
+		return unused;
+	}
+
+	public boolean hideAtomSymbol(final IAtom atom, final RendererModel model) {
+		return atom.getSymbol().equals("C") && !model.getKekuleStructure();
+	}
+
 }

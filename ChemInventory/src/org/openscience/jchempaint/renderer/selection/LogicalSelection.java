@@ -21,15 +21,13 @@ package org.openscience.jchempaint.renderer.selection;
 
 import java.awt.Color;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IChemModel;
 import org.openscience.cdk.interfaces.IChemObject;
-import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.tools.manipulator.ChemModelManipulator;
 import org.openscience.jchempaint.renderer.elements.IRenderingElement;
 
@@ -39,80 +37,98 @@ import org.openscience.jchempaint.renderer.elements.IRenderingElement;
  * @cdk.module rendercontrol
  */
 public class LogicalSelection implements IChemObjectSelection {
-    
-    public enum Type { ALL, NONE };
-    
-    private Type type;
-    
-    private IChemModel chemModel;
-    
-    public LogicalSelection(LogicalSelection.Type type) {
-        this.type = type;
-    }
 
-    public void clear() {
-        this.type = Type.NONE;
-        this.chemModel = null;
-    }
-    
-    public Type getType() {
-    	return type;
-    }
+	public enum Type {
+		ALL, NONE
+	};
 
-    public IRenderingElement generate(Color color) {
-        return null;
-    }
+	private Type		type;
 
-    public IAtomContainer getConnectedAtomContainer() {
-        if (this.chemModel != null) {
-            IAtomContainer ac = this.chemModel.getBuilder().newInstance(IAtomContainer.class);
-            for (IAtomContainer other : 
-                ChemModelManipulator.getAllAtomContainers(chemModel)) {
-                ac.add(other);
-            }
-            return ac;
-        }
-        return null;
-    }
+	private IChemModel	chemModel;
 
-    public boolean isFilled() {
-        return this.chemModel != null;
-    }
+	public LogicalSelection(final LogicalSelection.Type type) {
+		this.type = type;
+	}
 
-    public boolean isFinished() {
-        return true;
-    }
+	public void clear() {
+		type = Type.NONE;
+		chemModel = null;
+	}
 
-    public void select(IChemModel chemModel) {
-        if (this.type == Type.ALL) { 
-            this.chemModel = chemModel;
-        }
-    }
-    
-    public void select(IAtomContainer atomContainer) {
-        this.chemModel = atomContainer.getBuilder().newInstance(IChemModel.class);
-        IMoleculeSet molSet = atomContainer.getBuilder().newInstance(IMoleculeSet.class);
-        molSet.addAtomContainer(atomContainer);
-        this.chemModel.setMoleculeSet(molSet);
-    }
+	@Override
+	public boolean contains(final IChemObject obj) {
+		if (type == Type.NONE) {
+			return false;
+		}
 
-    public boolean contains( IChemObject obj ) {
-        if(type == Type.NONE)
-            return false;
-        
-        for(IAtomContainer other:
-                    ChemModelManipulator.getAllAtomContainers( chemModel )) {
-            if(other == obj) return true;
-            
-            if(obj instanceof IBond)
-                if( other.contains( (IBond) obj)) return true;
-            if(obj instanceof IAtom)
-                if( other.contains( (IAtom) obj)) return true;
-        }
-        return false;
-    }
-    
-    public <E extends IChemObject> Collection<E> elements(Class<E> clazz){
-        throw new UnsupportedOperationException();
-    }
+		for (final IAtomContainer other : ChemModelManipulator
+				.getAllAtomContainers(chemModel)) {
+			if (other == obj) {
+				return true;
+			}
+
+			if (obj instanceof IBond) {
+				if (other.contains((IBond) obj)) {
+					return true;
+				}
+			}
+			if (obj instanceof IAtom) {
+				if (other.contains((IAtom) obj)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	@Override
+	public <E extends IChemObject> Collection<E> elements(final Class<E> clazz) {
+		throw new UnsupportedOperationException();
+	}
+
+	public IRenderingElement generate(final Color color) {
+		return null;
+	}
+
+	@Override
+	public IAtomContainer getConnectedAtomContainer() {
+		if (chemModel != null) {
+			final IAtomContainer ac = chemModel.getBuilder().newInstance(
+					IAtomContainer.class);
+			for (final IAtomContainer other : ChemModelManipulator
+					.getAllAtomContainers(chemModel)) {
+				ac.add(other);
+			}
+			return ac;
+		}
+		return null;
+	}
+
+	public Type getType() {
+		return type;
+	}
+
+	@Override
+	public boolean isFilled() {
+		return chemModel != null;
+	}
+
+	public boolean isFinished() {
+		return true;
+	}
+
+	public void select(final IAtomContainer atomContainer) {
+		chemModel = atomContainer.getBuilder().newInstance(IChemModel.class);
+		final IAtomContainerSet molSet = atomContainer.getBuilder()
+				.newInstance(IAtomContainerSet.class);
+		molSet.addAtomContainer(atomContainer);
+		chemModel.setMoleculeSet(molSet);
+	}
+
+	@Override
+	public void select(final IChemModel chemModel) {
+		if (type == Type.ALL) {
+			this.chemModel = chemModel;
+		}
+	}
 }

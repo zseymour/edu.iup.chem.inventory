@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration PUBLIC "-//APACHE//DTD LOG4J 1.2//EN" "log4j.dtd">
+<log4j:configuration xmlns:log4j='http://jakarta.apache.org/log4j/'>
+  <appender name="STDOUT" class="org.apache.log4j.ConsoleAppender">
+    <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%-4r [%t] %-5p %c %x - %m%n"/>
+    </layout>
+  </appender>
+  <appender name="LOG_FILE" class="org.apache.log4j.FileAppender">
+  <param name="File" value="inventory.log" />
+  <param name="Append" value="true" />
+  <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%-4r [%t] %-5p %c %x - %m%n"/>
+    </layout>
+  </appender>
+  <category name="org.apache.log4j.xml">
+    <priority value="info" />
+  </category>
+  <root>
+    <priority value ="DEBUG" />
+    <appender-ref ref="STDOUT" />
+  </root>
+</log4j:configuration>

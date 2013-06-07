@@ -30,43 +30,51 @@ package org.openscience.jchempaint.undoredo;
 
 import javax.swing.undo.UndoableEdit;
 
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IChemModel;
-import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.interfaces.IReactionSet;
 import org.openscience.jchempaint.controller.IChemModelRelay;
 import org.openscience.jchempaint.controller.undoredo.LoadNewModelEdit;
 
 /**
  * A swing undo-redo implementation for loading a new ChemModel.
- *
+ * 
  */
-public class SwingLoadNewModelEdit extends LoadNewModelEdit implements UndoableEdit{
-	public SwingLoadNewModelEdit(IChemModel chemModel, IChemModelRelay relay,
-			IMoleculeSet oldsom, IReactionSet oldsor, IMoleculeSet newsom,
-			IReactionSet newsor, String type) {
+public class SwingLoadNewModelEdit extends LoadNewModelEdit implements
+		UndoableEdit {
+	public SwingLoadNewModelEdit(final IChemModel chemModel,
+			final IChemModelRelay relay, final IAtomContainerSet oldsom,
+			final IReactionSet oldsor, final IAtomContainerSet newsom,
+			final IReactionSet newsor, final String type) {
 		super(chemModel, relay, oldsom, oldsor, newsom, newsor, type);
 	}
 
-	public boolean addEdit(UndoableEdit arg0) {
+	@Override
+	public boolean addEdit(final UndoableEdit arg0) {
 		return false;
 	}
 
+	@Override
 	public void die() {
 	}
 
+	@Override
 	public String getRedoPresentationName() {
 		return getPresentationName();
 	}
 
+	@Override
 	public String getUndoPresentationName() {
 		return getPresentationName();
 	}
 
+	@Override
 	public boolean isSignificant() {
 		return true;
 	}
 
-	public boolean replaceEdit(UndoableEdit arg0) {
+	@Override
+	public boolean replaceEdit(final UndoableEdit arg0) {
 		return false;
 	}
 }

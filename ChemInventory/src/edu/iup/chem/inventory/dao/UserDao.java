@@ -4,14 +4,19 @@ import static edu.iup.chem.inventory.db.inventory.Tables.USER;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.jooq.Record;
 import org.jooq.exception.DataAccessException;
+import org.jooq.impl.Factory;
 
 import edu.iup.chem.inventory.ConnectionPool;
+import edu.iup.chem.inventory.Constants;
 import edu.iup.chem.inventory.Utils;
 import edu.iup.chem.inventory.db.inventory.InventoryFactory;
+import edu.iup.chem.inventory.db.inventory.tables.records.RoomRecord;
 import edu.iup.chem.inventory.db.inventory.tables.records.UserRecord;
 
 public class UserDao {
@@ -25,6 +30,43 @@ public class UserDao {
 	 * @return
 	 */
 	private static Logger		log	= Logger.getLogger(UserDao.class);
+
+	public static void clearExpiredUsers() {
+		try (Connection conn = ConnectionPool.getConnection()) {
+			final InventoryFactory create = new InventoryFactory(conn);
+			create.delete(USER)
+					.where(USER.ROLE_NAME.equal(Constants.DATA_ENTRY_ROLE))
+					.and(USER.EXPIRATION.lessThan(Factory.currentDate()))
+					.execute();
+		} catch (final SQLException e) {
+			LOG.error("Failed to clear out expired users.");
+		}
+
+	}
+
+	public static void deleteUser(final UserRecord user) {
+		AccessDao.revokeUserAccess(user);
+		try (Connection conn = ConnectionPool.getConnection()) {
+			final InventoryFactory create = new InventoryFactory(conn);
+			create.delete(USER).where(USER.UID.equal(user.getUid())).execute();
+		} catch (final SQLException e) {
+			LOG.error("Failed while deleting user.");
+		}
+
+	}
+
+	public static List<UserRecord> getAll() {
+		List<UserRecord> users = new ArrayList<>();
+		try (Connection conn = ConnectionPool.getConnection()) {
+			LOG.debug("Retreiving all users.");
+			final InventoryFactory create = new InventoryFactory(conn);
+			users = create.select().from(USER).fetchInto(UserRecord.class);
+		} catch (final SQLException e) {
+			LOG.error("SQL Error while fetching all users.");
+		}
+
+		return users;
+	}
 
 	public static UserRecord getByUsernamePassword(final String username,
 			final char[] password) {
@@ -67,4 +109,9 @@ public class UserDao {
 
 	}
 
+	public static void storeUserAndAccess(final UserRecord rec,
+			final List<RoomRecord> rooms) {
+		store(rec);
+		AccessDao.updateUserAccess(rec, rooms);
+	}
 }

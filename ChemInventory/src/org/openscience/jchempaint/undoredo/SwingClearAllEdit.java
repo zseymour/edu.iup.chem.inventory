@@ -30,41 +30,49 @@ package org.openscience.jchempaint.undoredo;
 
 import javax.swing.undo.UndoableEdit;
 
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IChemModel;
-import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.interfaces.IReactionSet;
 import org.openscience.jchempaint.controller.undoredo.ClearAllEdit;
 
 /**
  * A swing undo-redo implementation for clearing the panel.
- *
+ * 
  */
-public class SwingClearAllEdit extends ClearAllEdit implements UndoableEdit{
+public class SwingClearAllEdit extends ClearAllEdit implements UndoableEdit {
 
-	public SwingClearAllEdit(IChemModel chemModel, IMoleculeSet som, IReactionSet sor, String type) {
+	public SwingClearAllEdit(final IChemModel chemModel,
+			final IAtomContainerSet som, final IReactionSet sor,
+			final String type) {
 		super(chemModel, som, sor, type);
 	}
 
-	public boolean addEdit(UndoableEdit arg0) {
+	@Override
+	public boolean addEdit(final UndoableEdit arg0) {
 		return false;
 	}
 
+	@Override
 	public void die() {
 	}
 
+	@Override
 	public String getRedoPresentationName() {
 		return getPresentationName();
 	}
 
+	@Override
 	public String getUndoPresentationName() {
 		return getPresentationName();
 	}
 
+	@Override
 	public boolean isSignificant() {
 		return true;
 	}
 
-	public boolean replaceEdit(UndoableEdit arg0) {
+	@Override
+	public boolean replaceEdit(final UndoableEdit arg0) {
 		return false;
 	}
 

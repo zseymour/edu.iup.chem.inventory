@@ -23,52 +23,63 @@
  */
 package org.openscience.jchempaint.controller.undoredo;
 
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IChemModel;
-import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.interfaces.IReactionSet;
 
 /**
  * @cdk.module controlbasic
- * @cdk.svnrev  $Revision: 10979 $
+ * @cdk.svnrev $Revision: 10979 $
  */
 public class ClearAllEdit implements IUndoRedoable {
 
-    private static final long serialVersionUID = -9022673628051651034L;
-    
-    private IChemModel chemModel;
-	private IMoleculeSet som;
-	private IReactionSet sor;
-	private String type;
+	private static final long		serialVersionUID	= -9022673628051651034L;
 
-	public ClearAllEdit(IChemModel chemModel, IMoleculeSet som, IReactionSet sor, String type) {
+	private final IChemModel		chemModel;
+	private final IAtomContainerSet	som;
+	private final IReactionSet		sor;
+	private final String			type;
+
+	public ClearAllEdit(final IChemModel chemModel,
+			final IAtomContainerSet som, final IReactionSet sor,
+			final String type) {
 		this.chemModel = chemModel;
-		this.som=som;
-		this.sor=sor;
-		this.type=type;
+		this.som = som;
+		this.sor = sor;
+		this.type = type;
 	}
 
-	public void redo() {
-    	if(chemModel.getMoleculeSet()!=null)
-    		chemModel.getMoleculeSet().removeAllAtomContainers();
-    	if(chemModel.getReactionSet()!=null)
-    		chemModel.getReactionSet().removeAllReactions();	}
-
-	public void undo() {
-		if(som!=null)
-			chemModel.setMoleculeSet(som);
-		if(sor!=null)
-			chemModel.setReactionSet(sor);
-	}
-
+	@Override
 	public boolean canRedo() {
 		return true;
 	}
 
+	@Override
 	public boolean canUndo() {
 		return true;
 	}
-	
+
 	public String getPresentationName() {
 		return type;
+	}
+
+	@Override
+	public void redo() {
+		if (chemModel.getMoleculeSet() != null) {
+			chemModel.getMoleculeSet().removeAllAtomContainers();
+		}
+		if (chemModel.getReactionSet() != null) {
+			chemModel.getReactionSet().removeAllReactions();
+		}
+	}
+
+	@Override
+	public void undo() {
+		if (som != null) {
+			chemModel.setMoleculeSet(som);
+		}
+		if (sor != null) {
+			chemModel.setReactionSet(sor);
+		}
 	}
 }

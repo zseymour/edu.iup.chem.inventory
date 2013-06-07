@@ -45,7 +45,7 @@ public class AccessDao {
 		}
 
 		LOG.debug("Adding access for " + rec.getName() + " to "
-				+ roomsToAdd.size() + " rooms.");
+				+ roomsToAdd.size() + " rooms: " + roomsToAdd.toString());
 		try (Connection conn = ConnectionPool.getConnection()) {
 			final InventoryFactory create = new InventoryFactory(conn);
 			BatchBindStep bindTo = create
@@ -63,6 +63,24 @@ public class AccessDao {
 		} catch (final SQLException e) {
 			LOG.error("Failed to grant access.", e.getCause());
 		}
+
+	}
+
+	public static void revokeUserAccess(final UserRecord rec) {
+		try (Connection conn = ConnectionPool.getConnection()) {
+			final InventoryFactory create = new InventoryFactory(conn);
+			create.delete(ACCESS).where(ACCESS.UID.equal(rec.getUid()))
+					.execute();
+		} catch (final SQLException e) {
+			LOG.error("Failed to revoke user access");
+		}
+
+	}
+
+	public static void updateUserAccess(final UserRecord rec,
+			final List<RoomRecord> rooms) {
+		revokeUserAccess(rec);
+		grantUserAccess(rec, rooms);
 
 	}
 }

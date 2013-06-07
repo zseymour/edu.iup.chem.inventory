@@ -4,9 +4,11 @@
  */
 package edu.iup.chem.inventory.wizard;
 
+import java.util.Arrays;
 import java.util.Calendar;
 
 import javax.swing.JComboBox;
+import javax.swing.JOptionPane;
 
 import org.ciscavate.cjwizard.WizardPage;
 import org.ciscavate.cjwizard.WizardSettings;
@@ -79,10 +81,10 @@ public class VerifyBottleWizardPage extends WizardPage {
 		final Calendar cal = Calendar.getInstance();
 		jLabel1 = new javax.swing.JLabel();
 		jLabel2 = new javax.swing.JLabel();
-		shelf = new javax.swing.JTextField();
+		shelf = new javax.swing.JTextField(3);
 		instructor = new javax.swing.JTextField();
 		jLabel3 = new javax.swing.JLabel();
-		amount = new javax.swing.JTextField();
+		amount = new javax.swing.JTextField(10);
 		jLabel4 = new javax.swing.JLabel();
 		units = new javax.swing.JComboBox<>();
 		jLabel5 = new javax.swing.JLabel();
@@ -92,12 +94,13 @@ public class VerifyBottleWizardPage extends WizardPage {
 		cal.add(Calendar.YEAR, 10);
 		expiration = new JXDatePicker(cal.getTime());
 		jLabel8 = new javax.swing.JLabel();
-		bottle = new javax.swing.JTextField();
+		bottle = new javax.swing.JTextField(10);
 
 		jLabel1.setText("Room Number:");
 		final ListComboBoxModel<RoomRecord> roomModel = new ListComboBoxModel<>(
 				RoomDao.getAllRoomRecords());
 		room = new JComboBox<>(roomModel);
+		room.setEditable(false);
 		room.setRenderer(new DefaultListRenderer(new StringValue() {
 			@Override
 			public String getString(final Object value) {
@@ -110,13 +113,23 @@ public class VerifyBottleWizardPage extends WizardPage {
 		}));
 		AutoCompleteDecorator.decorate(room);
 
+		room.setSelectedItem(RoomDao.getDefaultRoom("Weyandt 146"));
+
 		room.setName("room"); // NOI18N
 
 		jLabel2.setText("Shelf:");
 
 		shelf.setName("shelf"); // NOI18N
 
+		final String[] instructors = new String[] { "Chemistry", "Physics",
+				"Biology", "Geoscience", "Psychology", "Research Institute" };
+
 		instructor.setName("instructor"); // NOI18N
+
+		instructor.setText("Chemistry");
+
+		AutoCompleteDecorator.decorate(instructor, Arrays.asList(instructors),
+				false);
 
 		jLabel3.setText("Instructor:");
 
@@ -141,7 +154,11 @@ public class VerifyBottleWizardPage extends WizardPage {
 		jLabel8.setText("Bottle Number:");
 
 		bottle.setName("bottle"); // NOI18N
-		bottle.setText(LocationDao.getNextAvailableBottle());
+		final String nextBottle = LocationDao.getNextAvailableBottle();
+		bottle.setText(nextBottle);
+
+		AutoCompleteDecorator
+				.decorate(bottle, Arrays.asList(nextBottle), false);
 
 		final javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
 		setLayout(layout);
@@ -335,4 +352,20 @@ public class VerifyBottleWizardPage extends WizardPage {
 												.addComponent(jLabel8))
 								.addContainerGap(153, Short.MAX_VALUE)));
 	}// </editor-fold>//GEN-END:initComponents
+
+	@Override
+	public void updateSettings(final WizardSettings newSettings) {
+		super.updateSettings(newSettings);
+
+		final String bottleNo = (String) newSettings.get("bottle");
+
+		if (LocationDao.exists(bottleNo)) {
+			JOptionPane
+					.showMessageDialog(this,
+							"A bottle with that number already exists in our database.");
+			settings.put("next", 0);
+			return;
+		}
+
+	}
 }

@@ -1,7 +1,9 @@
 package edu.iup.chem.inventory.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Desktop;
 import java.awt.Dialog;
+import java.awt.Dialog.ModalityType;
 import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.GraphicsEnvironment;
@@ -9,27 +11,38 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.sql.Date;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JFrame;
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
 import javax.swing.JToolBar;
+import javax.swing.SwingUtilities;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.apache.log4j.Logger;
 import org.ciscavate.cjwizard.WizardPage;
 import org.ciscavate.cjwizard.WizardSettings;
-import org.openscience.cdk.Molecule;
+import org.jdesktop.swingx.JXFrame;
+import org.openscience.cdk.AtomContainer;
+
+import com.ibm.icu.util.Calendar;
 
 import edu.iup.chem.inventory.Constants;
 import edu.iup.chem.inventory.Utils;
-import edu.iup.chem.inventory.dao.AccessDao;
+import edu.iup.chem.inventory.csv.CSVBottle;
+import edu.iup.chem.inventory.csv.InventoryCSV;
 import edu.iup.chem.inventory.dao.ChemicalDao;
 import edu.iup.chem.inventory.dao.LocationDao;
+import edu.iup.chem.inventory.dao.RoomDao;
 import edu.iup.chem.inventory.dao.UserDao;
 import edu.iup.chem.inventory.db.inventory.enums.ChemicalCarc;
 import edu.iup.chem.inventory.db.inventory.enums.ChemicalCold;
@@ -42,13 +55,17 @@ import edu.iup.chem.inventory.db.inventory.tables.records.LocationRecord;
 import edu.iup.chem.inventory.db.inventory.tables.records.RoleRecord;
 import edu.iup.chem.inventory.db.inventory.tables.records.RoomRecord;
 import edu.iup.chem.inventory.db.inventory.tables.records.UserRecord;
+import edu.iup.chem.inventory.misc.ListDialog;
+import edu.iup.chem.inventory.reporting.GasReportGenerator;
+import edu.iup.chem.inventory.reporting.ReportGenerator;
+import edu.iup.chem.inventory.reporting.ReportGenerator.ReportType;
 import edu.iup.chem.inventory.search.ChemicalSubstructureSearcher;
 import edu.iup.chem.inventory.wizard.InventoryWizardListener;
-import edu.iup.chem.inventory.wizard.NewBottlePageFactory;
 import edu.iup.chem.inventory.wizard.NewChemicalPageFactory;
 import edu.iup.chem.inventory.wizard.NewUserPageFactory;
+import edu.iup.chem.inventory.wizard.WastePageFactory;
 
-public class MainFrame extends JFrame {
+public class MainFrame extends JXFrame {
 	private class MenuActionListener implements ActionListener {
 
 		@Override
@@ -57,13 +74,6 @@ public class MainFrame extends JFrame {
 				case "NEW_CHEMICAL":
 					showNewChemicalWizard();
 					break;
-				case "NEW_BOTTLE":
-					showNewBottleWizard();
-					break;
-				case "DELETE":
-					LOG.debug("Deleting selected rows.");
-					deleteRows();
-					break;
 				case "NEW_USER":
 					LOG.debug("Launching create user dialog");
 					showNewUserWizard();
@@ -71,59 +81,55 @@ public class MainFrame extends JFrame {
 				case "SUB_SEARCH":
 					showSketchDialog();
 					break;
+				case "MANAGE_USER":
+					showUserManagement();
+					break;
+				case "IMPORT":
+					importBottles();
+					break;
+				case "WASTE":
+					showWasteDialog();
+					break;
+				case "REPORT":
+					viewReport();
+					break;
 				default:
 					break;
 			}
 
 		}
 
-		private void deleteRows() {
-			search.deleteRows();
+		private void importBottles() {
+			final Object[] rooms = RoomDao.getAllRoomNames().toArray();
+			final String room = (String) JOptionPane.showInputDialog(
+					MainFrame.this, "Select room to add bottles to: ",
+					"Import to Room", JOptionPane.QUESTION_MESSAGE, null,
+					rooms, "Weyandt 146");
+			if (room == null) {
+				return;
+			}
+			final JFileChooser chooser = new JFileChooser();
+			final FileNameExtensionFilter filter = new FileNameExtensionFilter(
+					"Comma-separated files", "csv");
+			chooser.setFileFilter(filter);
+			final int returnVal = chooser.showOpenDialog(MainFrame.this);
+			if (returnVal == JFileChooser.APPROVE_OPTION) {
+				final File f = chooser.getSelectedFile();
 
-		}
-
-		private void showNewBottleWizard() {
-			final InventoryWizardDialog iwd = new InventoryWizardDialog(
-					new NewBottlePageFactory());
-			iwd.addWizardListener(new InventoryWizardListener(iwd) {
-
-				@Override
-				public void onFinished(final List<WizardPage> path,
-						final WizardSettings settings) {
-					iwd.dispose();
-					if (DEBUG) {
-						log.debug("WizardSettings: " + settings);
-						return;
-					}
-
-					final ChemicalRecord rec = (ChemicalRecord) settings
-							.get("chemicalRecord");
-					final LocationRecord loc = new LocationRecord();
-					loc.setCas(rec.getCas());
-					loc.setActive((byte) 0b1);
-					loc.setAmount(Double.parseDouble((String) settings
-							.get("amount")));
-					loc.setArrival((Date) settings.get("arrival"));
-					loc.setBottleNo(Integer.parseInt((String) settings
-							.get("bottle")));
-					loc.setExpiration((Date) settings.get("expiration"));
-					loc.setInstructor((String) settings.get("instructor"));
-					loc.setPartNo(0);
-					loc.setRoom(((RoomRecord) settings.get("room")).getRoom());
-					loc.setShelf((String) settings.get("shelf"));
-					loc.setSupplier("None");
-					loc.setUnits((String) settings.get("units"));
-
-					LocationDao.store(loc);
-					search.fireChemicalsAdded();
-
+				final List<CSVBottle> bottles = InventoryCSV
+						.loadBottlesFromFile(f, room);
+				final JTextArea message = new JTextArea();
+				message.setLineWrap(true);
+				message.setWrapStyleWord(true);
+				message.setColumns(30);
+				for (final String result : LocationDao.importBottles(bottles)) {
+					message.append(result + "\n");
 				}
 
-			});
+				JOptionPane.showMessageDialog(null, message, "Import Results",
+						JOptionPane.INFORMATION_MESSAGE);
+			}
 
-			iwd.pack();
-			iwd.setModalityType(Dialog.ModalityType.APPLICATION_MODAL);
-			iwd.setVisible(true);
 		}
 
 		private void showNewChemicalWizard() {
@@ -139,8 +145,12 @@ public class MainFrame extends JFrame {
 						log.debug("WizardSettings: " + settings);
 						return;
 					}
-					final ChemicalRecord rec = (ChemicalRecord) settings
+					ChemicalRecord rec = (ChemicalRecord) settings
 							.get("chemicalRecord");
+					if (rec == null) {
+						rec = new ChemicalRecord();
+						rec.setCas((String) settings.get("cas"));
+					}
 					rec.setName((String) settings.get("name"));
 					rec.setFormula((String) settings.get("formula"));
 					rec.setSmiles((String) settings.get("smiles"));
@@ -172,10 +182,26 @@ public class MainFrame extends JFrame {
 					rec.setNfpaR((Integer) settings.get("nfpar"));
 					rec.setNfpaS((ChemicalNfpaS) settings.get("nfpas"));
 
+					rec.setComplete((byte) 0);
+
+					final File msds = (File) settings.get("msds");
+
+					rec.setCid(null);
+
 					log.debug(rec.log());
 
-					ChemicalDao.store(rec);
-					search.fireChemicalsAdded();
+					rec = ChemicalDao.store(rec);
+
+					// if (rec.getCid() == null) {
+					// rec.setCid(ChemicalDao.lastID());
+					// }
+
+					ChemicalDao.storeNames(rec);
+					if (msds != null) {
+						ChemicalDao.storeMSDS(rec, msds);
+					}
+
+					search.fireChemicalsAdded(rec);
 				}
 
 			});
@@ -187,7 +213,7 @@ public class MainFrame extends JFrame {
 
 		private void showNewUserWizard() {
 			final InventoryWizardDialog iwd = new InventoryWizardDialog(
-					new NewUserPageFactory());
+					new NewUserPageFactory(null));
 			iwd.addWizardListener(new InventoryWizardListener(iwd) {
 
 				@Override
@@ -211,6 +237,10 @@ public class MainFrame extends JFrame {
 					rec.setRid(role);
 					rec.setRoleName(role);
 
+					final java.util.Date expiration = (Date) settings
+							.get("expiration");
+					rec.setExpirationFromUtil(expiration);
+
 					final List<Object> objects = (List<Object>) settings
 							.get("rooms");
 					final List<RoomRecord> rooms = new ArrayList<>();
@@ -223,9 +253,8 @@ public class MainFrame extends JFrame {
 						rec.setRoom(rooms.get(0));
 					}
 
-					log.debug("Adding user: " + rec.getUsername());
-					UserDao.store(rec);
-					AccessDao.grantUserAccess(rec, rooms);
+					log.info("Adding user: " + rec.getUsername());
+					UserDao.storeUserAndAccess(rec, rooms);
 
 				}
 
@@ -248,7 +277,7 @@ public class MainFrame extends JFrame {
 				public void propertyChange(final PropertyChangeEvent evt) {
 					log.debug("Detected property change.");
 					if (evt.getPropertyName().equals("sketch")) {
-						final Molecule substructure = (Molecule) evt
+						final AtomContainer substructure = (AtomContainer) evt
 								.getNewValue();
 						sketch.dispose();
 						log.debug("Searching for "
@@ -263,8 +292,202 @@ public class MainFrame extends JFrame {
 
 			});
 
-			sketch.setVisible(true);
+			SwingUtilities.invokeLater(new Runnable() {
 
+				@Override
+				public void run() {
+					sketch.setVisible(true);
+				}
+
+			});
+
+		}
+
+		private void showUserManagement() {
+			final UserManagementDialog umd = new UserManagementDialog();
+			umd.pack();
+			umd.setModalityType(ModalityType.APPLICATION_MODAL);
+			umd.setVisible(true);
+
+		}
+
+		private void showWasteDialog() {
+			final InventoryWizardDialog iwd = new InventoryWizardDialog(
+					new WastePageFactory());
+			iwd.addWizardListener(new InventoryWizardListener(iwd) {
+
+				@Override
+				public void onFinished(final List<WizardPage> path,
+						final WizardSettings settings) {
+					iwd.dispose();
+					if (DEBUG) {
+						log.debug("WizardSettings: " + settings);
+						return;
+					}
+					final LocationRecord rec = new LocationRecord();
+					rec.setCas("000-00-0");
+					rec.setCid(1);
+					String bottle = (String) settings.get("bottle");
+
+					if (bottle == null) {
+						return;
+					}
+
+					if (!bottle.startsWith("W")) {
+						bottle = "W" + bottle;
+					}
+
+					rec.setBottle(bottle);
+
+					final String description = (String) settings
+							.get("description");
+
+					rec.setDescription(description);
+
+					rec.setActive((byte) 1);
+					rec.setAmount(Double.parseDouble((String) settings
+							.get("amount")));
+					rec.setArrival(new java.sql.Date(((java.util.Date) settings
+							.get("arrival")).getTime()));
+					final java.util.Date arrival = (java.util.Date) settings
+							.get("arrival");
+					rec.setArrival(new java.sql.Date(arrival.getTime()));
+					final Calendar cal = Calendar.getInstance();
+					cal.setTime(arrival);
+					cal.add(Calendar.MONTH, 1);
+					rec.setExpiration(new java.sql.Date(cal.getTimeInMillis()));
+					rec.setInstructor("Chemistry");
+					rec.setPartNo(0);
+					rec.setRoom(((RoomRecord) settings.get("room")).getRoom());
+					rec.setShelf((String) settings.get("shelf"));
+					rec.setSupplier("None");
+					rec.setUnits((String) settings.get("units"));
+
+					LocationDao.store(rec);
+
+				}
+
+			});
+
+			iwd.pack();
+			iwd.setModalityType(Dialog.ModalityType.APPLICATION_MODAL);
+			iwd.setVisible(true);
+
+		}
+
+		private void viewReport() {
+			final String[] options = new String[] { "Waste Report",
+					"Gas Cylinder Report", "Storage Class Report by Room",
+					"List of Chemicals in Room", "Room 126A Report",
+					"Room 146 Report" };
+			final String reportSelection = (String) JOptionPane
+					.showInputDialog(MainFrame.this,
+							"Which report would you like to view?",
+							"Select Report", JOptionPane.QUESTION_MESSAGE,
+							null, options, options[0]);
+
+			if (reportSelection == null) {
+				return;
+			}
+
+			switch (reportSelection) {
+				case "Waste Report":
+					reports.generateReport(ReportType.WASTE);
+					final int response = JOptionPane
+							.showOptionDialog(
+									null,
+									"Would you like to delete records for these waste bottles now?",
+									"Remove waste records?",
+									JOptionPane.YES_NO_OPTION,
+									JOptionPane.QUESTION_MESSAGE, null,
+									new String[] { "Now", "Later" }, "Now");
+					if (response == JOptionPane.YES_OPTION) {
+						final String[] allWaste = Utils
+								.intArrayToStringArray(LocationDao
+										.getAllWasteBottles());
+						final List<String> bottlesToSave = ListDialog
+								.showDialog(null, MainFrame.this,
+										"Select waste bottles to retain: ",
+										"Current Waste Bottles", allWaste,
+										allWaste[0], null);
+						if (bottlesToSave.size() == allWaste.length) {
+							return;
+						} else if (!bottlesToSave.isEmpty()) {
+							LocationDao
+									.clearAllWasteBottlesExcept(bottlesToSave);
+						} else {
+							LocationDao.clearAllWasteBottles();
+						}
+					}
+					break;
+				case "Gas Cylinder Report":
+					final Date start = DateDialog.showDatePicker(
+							"Choose start date",
+							"Select earliest arrival date:");
+					final Date end = DateDialog
+							.showDatePicker("Choose end date",
+									"Select latest expiration date:");
+					try {
+						final File f = File.createTempFile("inventory", ".xls");
+						final boolean success = GasReportGenerator
+								.createReport(start, end, f);
+
+						if (success) {
+							if (Desktop.isDesktopSupported()) {
+								try {
+									Desktop.getDesktop().open(f);
+								} catch (final IOException ex) {
+									Utils.showMessage("Error",
+											"Could not open spreadsheet.  Perhaps no program is available?");
+								}
+							} else {
+								Utils.showMessage("Warning",
+										"Unable to open gas report, but it has been saved to disk at "
+												+ f.getAbsolutePath());
+							}
+						} else {
+							Utils.showMessage("Empty report",
+									"No bottles were found in this date range.");
+						}
+
+					} catch (final IOException e) {
+						Utils.showMessage("Warning",
+								"Failed to load gas cylinders from database. Please try again.");
+					}
+
+					break;
+				case "Storage Class Report by Room":
+					final Object[] rooms = LocationDao.getRoomsWithBottles()
+							.toArray();
+					final String roomSelection = (String) JOptionPane
+							.showInputDialog(MainFrame.this,
+									"Which room would you like to view?",
+									"Select Room",
+									JOptionPane.QUESTION_MESSAGE, null, rooms,
+									rooms[0]);
+					if (roomSelection != null) {
+						reports.generateStorageReport(roomSelection);
+					}
+					break;
+				case "List of Chemicals in Room":
+					final Object[] roomArray = LocationDao
+							.getRoomsWithBottles().toArray();
+					final String room = (String) JOptionPane.showInputDialog(
+							MainFrame.this,
+							"Which room would you like to view?",
+							"Select Room", JOptionPane.QUESTION_MESSAGE, null,
+							roomArray, roomArray[0]);
+					if (room != null) {
+						reports.generateRoomReport(room);
+					}
+					break;
+				case "Room 126A Report":
+					reports.generateReport(ReportType.ROOM_126A);
+				case "Room 146 Report":
+					reports.generateReport(ReportType.ROOM_146);
+				default:
+					break;
+			}
 		}
 	}
 
@@ -275,10 +498,12 @@ public class MainFrame extends JFrame {
 	 */
 	private static final long		serialVersionUID	= 987106188401169152L;
 	private static final Logger		LOG					= Logger.getLogger(MainFrame.class);
-	private static final boolean	DEBUG				= true;
+	private static final boolean	DEBUG				= false;
 
 	private JTabbedPane				pane;
 	private DataPanel				search;
+
+	private ReportGenerator			reports;
 
 	public MainFrame() {
 		super();
@@ -316,20 +541,26 @@ public class MainFrame extends JFrame {
 		JButton button = newMenuButton("Add New Chemical", "NEW_CHEMICAL");
 		toolBar.add(button);
 
-		button = newMenuButton("Add New Bottle", "NEW_BOTTLE");
+		button = newMenuButton("Add Waste Bottle", "WASTE");
 		toolBar.add(button);
 
-		button = newMenuButton("Delete Selected Item(s)", "DELETE");
+		button = newMenuButton("Import Bottles from CSV", "IMPORT");
 		toolBar.add(button);
 
 		if (Utils.isAdmin()) {
 			button = newMenuButton("Add New User", "NEW_USER");
+			toolBar.add(button);
+			button = newMenuButton("Manage Users/Access", "MANAGE_USER");
+			toolBar.add(button);
+
+			button = newMenuButton("View Report...", "REPORT");
 			toolBar.add(button);
 		}
 
 	}
 
 	public void init() {
+		reports = new ReportGenerator();
 		setTitle("IUP Chemical Inventory");
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setLayout(new BorderLayout());
@@ -375,6 +606,8 @@ public class MainFrame extends JFrame {
 		buildSearchBar(searchBar);
 		toolBarPanel.add(searchBar);
 		add(toolBarPanel, BorderLayout.PAGE_START);
+		// This is a lousy place to have to put this, but it will have to do.
+		UserDao.clearExpiredUsers();
 
 	}
 

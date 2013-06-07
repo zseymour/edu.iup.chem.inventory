@@ -38,7 +38,7 @@ public class ConnectionPool {
 			// the settings below are optional -- c3p0 can work with defaults
 			pool.setMinPoolSize(5);
 			pool.setAcquireIncrement(5);
-			pool.setMaxPoolSize(25);
+			pool.setMaxPoolSize(15);
 			// pool.setDebugUnreturnedConnectionStackTraces(true);
 			pool.setUnreturnedConnectionTimeout(120);
 		} catch (final PropertyVetoException e) {

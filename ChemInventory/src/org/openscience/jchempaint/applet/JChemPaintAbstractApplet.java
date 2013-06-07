@@ -48,7 +48,6 @@ import java.util.ResourceBundle;
 import java.util.StringTokenizer;
 
 import javax.swing.JApplet;
-import javax.vecmath.Vector2d;
 
 import org.openscience.cdk.ChemModel;
 import org.openscience.cdk.DefaultChemObjectBuilder;
@@ -58,16 +57,12 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IChemModel;
 import org.openscience.cdk.interfaces.IMolecularFormula;
-import org.openscience.cdk.interfaces.IMolecule;
-import org.openscience.cdk.interfaces.IMoleculeSet;
+import org.openscience.cdk.io.IChemObjectReader.Mode;
 import org.openscience.cdk.io.ISimpleChemObjectReader;
 import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.cdk.io.MDLV2000Writer;
 import org.openscience.cdk.io.RGroupQueryReader;
 import org.openscience.cdk.io.RGroupQueryWriter;
-import org.openscience.cdk.io.IChemObjectReader.Mode;
-import org.openscience.cdk.layout.StructureDiagramGenerator;
-import org.openscience.cdk.smiles.FixBondOrdersTool;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.manipulator.ChemModelManipulator;
@@ -80,9 +75,6 @@ import org.openscience.jchempaint.StringHelper;
 import org.openscience.jchempaint.action.CreateSmilesAction;
 import org.openscience.jchempaint.application.JChemPaint;
 import org.openscience.jchempaint.controller.IControllerModel;
-import org.openscience.jchempaint.controller.undoredo.IUndoRedoFactory;
-import org.openscience.jchempaint.controller.undoredo.IUndoRedoable;
-import org.openscience.jchempaint.controller.undoredo.UndoRedoHandler;
 import org.openscience.jchempaint.renderer.RendererModel;
 import org.openscience.jchempaint.renderer.selection.IChemObjectSelection;
 import org.openscience.jchempaint.renderer.selection.LogicalSelection;
@@ -94,626 +86,668 @@ import org.openscience.jchempaint.renderer.selection.LogicalSelection;
  * 
  */
 public abstract class JChemPaintAbstractApplet extends JApplet {
-    private AbstractJChemPaintPanel theJcpp = null;
-    private JExternalFrame jexf;
-    protected boolean debug = false;
-    protected List<String> blacklist = new ArrayList<String>();
-    
-    private static String appletInfo = "JChemPaint Applet. See http://jchempaint.github.com "
-            + "for more information";
+	private AbstractJChemPaintPanel	theJcpp		= null;
+	private JExternalFrame			jexf;
+	protected boolean				debug		= false;
+	protected List<String>			blacklist	= new ArrayList<String>();
 
-    public static String[][] paramInfo;
-    
-    static{
-    	List<List<String>> infos = new ArrayList<List<String>>();
-    	infos.add(Arrays.asList("background", "color",
-                     "Background color as integer or hex starting with #"));
-    	infos.add(Arrays.asList("atomNumbersVisible", "true or false",
-                     "should atom numbers be shown"));
-    	infos.add(Arrays.asList("load", "url", "URL of the chemical data"));
-    	infos.add(Arrays.asList("compact", "true or false",
-                     "compact means elements shown as dots, no figures etc. (default false)" ));
-    	infos.add(Arrays.asList("tooltips",
-                     "string like 'atomumber|test|atomnumber|text'",
-                     "the texts will be used as tooltips for the respective atoms (leave out if none required"));
-    	infos.add(Arrays.asList("impliciths", "true or false",
-                     "the implicit hs will be added from start (default true)"));
-    	infos.add(Arrays.asList("spectrumRenderer",
-                     "string",
-                     "name of a spectrum applet (see subproject in NMRShiftDB) where peaks should be highlighted when hovering over atom"));
-    	infos.add(Arrays.asList("hightlightTable",
-                     "true or false",
-                     "if true peaks in a table will be highlighted when hovering over atom, ids are assumed to be tableidX, where X=atomnumber starting with 0 (default false)" ));
-    	infos.add(Arrays.asList("smiles", "string", "a structure to load as smiles"));
-    	infos.add(Arrays.asList("mol", "string", "a structure to load as MOL V2000"));
-    	infos.add(Arrays.asList("scrollbars",
-                     "true or false",
-                     "if the molecule is too big to be displayed in normal size, shall scrollbars be used (default) or the molecule be resized - only for viewer applet"));
-    	infos.add(Arrays.asList("dotranslate",
-                     "true or false",
-                     "should user interface be translated (default) or not (e. g. if you want an English-only webpage)"));
-    	infos.add(Arrays.asList("language",
-                         "language code",
-                         "a valid language code to use for ui language"));
-    	infos.add(Arrays.asList("detachable", "true or false",
-                     "should the applet be detacheable by a double click (default false)"));
-    	infos.add(Arrays.asList("detachableeditor", "true or false",
-                     "should the applet be detacheable as an editor by a double click (default false), only for viewer"));
-    	infos.add(Arrays.asList("debug", "true or false",
-                     "switches on debug output (default false)"));
-    	String resource = "org.openscience.jchempaint.resources.features";
-        ResourceBundle featuresDefinition = ResourceBundle.getBundle(resource, Locale.getDefault());
-        Iterator<String> featuresit = featuresDefinition.keySet().iterator();
-        while(featuresit.hasNext()){
-        	String feature = featuresit.next();
-        	infos.add(Arrays.asList(feature,"on or off","switches on or off the ui elements of this feature (default on)"));
-        }
-        paramInfo = new String[infos.size()][3];
-        for(int i=0;i<infos.size();i++){
-        	paramInfo[i]=infos.get(i).toArray(new String[3]);
-        }
-    }
-    
-    /**
-     * Gives basic information about the applet.
-     * @see java.applet.Applet#getAppletInfo()
-     */
-    @Override
-    public String getAppletInfo() {
-        return appletInfo;
-    }
+	private static String			appletInfo	= "JChemPaint Applet. See http://jchempaint.github.com "
+														+ "for more information";
 
-    /**
-     * Gives informations about applet params.
-     * @see java.applet.Applet#getParameterInfo()
-     */
-    @Override
-    public String[][] getParameterInfo() {
-        return paramInfo;
-    }
+	public static String[][]		paramInfo;
 
-    /**
-     * loads a molecule from url or smiles
-     */
-    protected void loadModelFromParam() {
-        URL fileURL = null;
-        String smiles = null;
-        String mol = null;
-        try {
-            URL documentBase = getDocumentBase();
-            String load = getParameter("load");
-            if (load != null)
-                fileURL = new URL(documentBase, load);
-            smiles = getParameter("smiles");
-            mol = getParameter("mol");
-        } catch (Exception exception) {
-            theJcpp.announceError(exception);
-        }
-        if (fileURL != null)
-            loadModelFromUrl(fileURL, theJcpp);
-        if (smiles != null)
-            loadModelFromSmiles(smiles);
-        if (mol != null) {
-            try {
-                setMolFileWithReplace(mol);
-            } catch (Exception exception) {
-                theJcpp.announceError(exception);
-            }
-        }
-    }
-
-    /**
-     * Loads a molecule from a smiles into jcp
-     * 
-     * @param fileURL
-     */
-    public void loadModelFromSmiles(String smiles) {
-        if (smiles != null) {
-            try {
-                SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder
-                        .getInstance());
-                IMolecule mol = sp.parseSmiles(smiles);
-
-                //for some reason, smilesparser sets valencies, which we don't want in jcp
-                for(int i=0;i<mol.getAtomCount();i++){
-                	mol.getAtom(i).setValency(null);
-                }
-		JChemPaint.generateModel(theJcpp, mol, true, false);
-                /*StructureDiagramGenerator sdg = new StructureDiagramGenerator();
-                sdg.setMolecule(mol);
-                sdg.generateCoordinates(new Vector2d(0, 1));
-                mol = sdg.getMolecule();
-                mol = new FixBondOrdersTool().kekuliseAromaticRings(mol);
-		
-                IChemModel chemModel = DefaultChemObjectBuilder.getInstance()
-                        .newInstance(IChemModel.class);
-                chemModel.setMoleculeSet(DefaultChemObjectBuilder.getInstance()
-                        .newInstance(IMoleculeSet.class));
-                chemModel.getMoleculeSet().addAtomContainer(mol);
-                theJcpp.setChemModel(chemModel);
-				
-		IUndoRedoFactory undoRedoFactory= theJcpp.get2DHub().getUndoRedoFactory();
-		UndoRedoHandler undoRedoHandler= theJcpp.get2DHub().getUndoRedoHandler();
-
-		if (undoRedoFactory!=null) {
-			IUndoRedoable undoredo = undoRedoFactory.getAddAtomsAndBondsEdit(theJcpp.get2DHub().getIChemModel(), 
-			mol, null, "Paste", theJcpp.get2DHub());
-			undoRedoHandler.postEdit(undoredo);
+	static {
+		final List<List<String>> infos = new ArrayList<List<String>>();
+		infos.add(Arrays.asList("background", "color",
+				"Background color as integer or hex starting with #"));
+		infos.add(Arrays.asList("atomNumbersVisible", "true or false",
+				"should atom numbers be shown"));
+		infos.add(Arrays.asList("load", "url", "URL of the chemical data"));
+		infos.add(Arrays
+				.asList("compact", "true or false",
+						"compact means elements shown as dots, no figures etc. (default false)"));
+		infos.add(Arrays
+				.asList("tooltips",
+						"string like 'atomumber|test|atomnumber|text'",
+						"the texts will be used as tooltips for the respective atoms (leave out if none required"));
+		infos.add(Arrays.asList("impliciths", "true or false",
+				"the implicit hs will be added from start (default true)"));
+		infos.add(Arrays
+				.asList("spectrumRenderer",
+						"string",
+						"name of a spectrum applet (see subproject in NMRShiftDB) where peaks should be highlighted when hovering over atom"));
+		infos.add(Arrays
+				.asList("hightlightTable",
+						"true or false",
+						"if true peaks in a table will be highlighted when hovering over atom, ids are assumed to be tableidX, where X=atomnumber starting with 0 (default false)"));
+		infos.add(Arrays.asList("smiles", "string",
+				"a structure to load as smiles"));
+		infos.add(Arrays.asList("mol", "string",
+				"a structure to load as MOL V2000"));
+		infos.add(Arrays
+				.asList("scrollbars",
+						"true or false",
+						"if the molecule is too big to be displayed in normal size, shall scrollbars be used (default) or the molecule be resized - only for viewer applet"));
+		infos.add(Arrays
+				.asList("dotranslate",
+						"true or false",
+						"should user interface be translated (default) or not (e. g. if you want an English-only webpage)"));
+		infos.add(Arrays.asList("language", "language code",
+				"a valid language code to use for ui language"));
+		infos.add(Arrays
+				.asList("detachable", "true or false",
+						"should the applet be detacheable by a double click (default false)"));
+		infos.add(Arrays
+				.asList("detachableeditor",
+						"true or false",
+						"should the applet be detacheable as an editor by a double click (default false), only for viewer"));
+		infos.add(Arrays.asList("debug", "true or false",
+				"switches on debug output (default false)"));
+		final String resource = "org.openscience.jchempaint.resources.features";
+		final ResourceBundle featuresDefinition = ResourceBundle.getBundle(
+				resource, Locale.getDefault());
+		final Iterator<String> featuresit = featuresDefinition.keySet()
+				.iterator();
+		while (featuresit.hasNext()) {
+			final String feature = featuresit.next();
+			infos.add(Arrays
+					.asList(feature, "on or off",
+							"switches on or off the ui elements of this feature (default on)"));
 		}
-		theJcpp.updateUndoRedoControls();*/
-		
-            } catch (Exception exception) {
-                theJcpp.announceError(exception);
-            }
-        } else {
-            theJcpp.setChemModel(new ChemModel());
-        }
-    }
+		paramInfo = new String[infos.size()][3];
+		for (int i = 0; i < infos.size(); i++) {
+			paramInfo[i] = infos.get(i).toArray(new String[3]);
+		}
+	}
 
-    public void setSmiles(String smiles) {
-        loadModelFromSmiles(smiles);
-        theJcpp.get2DHub().updateView();
-        repaint();
-    }
+	/**
+	 * This method sets a structure in the editor and leaves the old one. This
+	 * method replaces all \n characters with the system line separator. This
+	 * can be used when setting a mol file in an applet without knowing which
+	 * platform the applet is running on.
+	 * 
+	 * @param mol
+	 *            The mol file to set (V2000)
+	 * @throws Exception
+	 */
+	public void addMolFileWithReplace(final String mol) throws Exception {
+		final StringBuffer newmol = new StringBuffer();
+		int s = 0;
+		int e = 0;
+		while ((e = mol.indexOf("\\n", s)) >= 0) {
+			newmol.append(mol.substring(s, e));
+			newmol.append(System.getProperty("line.separator"));
+			s = e + 2;
+		}
+		newmol.append(mol.substring(s));
+		final MDLV2000Reader reader = new MDLV2000Reader(new StringReader(
+				newmol.toString()));
+		final IAtomContainer cdkmol = reader.read(DefaultChemObjectBuilder
+				.getInstance().newInstance(IAtomContainer.class));
+		JChemPaint.generateModel(theJcpp, cdkmol, false, false);
+		theJcpp.get2DHub().updateView();
+		// the newly opened file should nicely fit the screen
+		theJcpp.getRenderPanel().setFitToScreen(true);
+		theJcpp.getRenderPanel().update(theJcpp.getRenderPanel().getGraphics());
+		// enable zooming by removing constraint
+		theJcpp.getRenderPanel().setFitToScreen(false);
+	}
 
-    /**
-     * Loads a molecule from a url into jcp
-     * 
-     * @param fileURL
-     */
-    public void loadModelFromUrl(URL fileURL, AbstractJChemPaintPanel panel) {
-        try {
-            IChemModel chemModel = JChemPaint.readFromFileReader(fileURL,
-                    fileURL.toString(), null, panel);
-            theJcpp.setChemModel(chemModel);
-        } catch (Exception exception) {
-            theJcpp.announceError(exception);
-        }
-    }
+	/**
+	 * Clears the applet
+	 */
+	public void clear() {
+		theJcpp.get2DHub().zap();
+		theJcpp.get2DHub().updateView();
+		theJcpp.getRenderPanel().getRenderer().getRenderer2DModel()
+				.setZoomFactor(1);
 
-    /**
-     * NOT FOR USE FROM JavaScript.
-     */
-    @Override
-    public void start() {
-        // Parameter parsing goes here
-        loadModelFromParam();
-        RendererModel rendererModel = theJcpp.get2DHub().getRenderer()
-                .getRenderer2DModel();
-        IChemModel chemModel = theJcpp.getChemModel();
-        IControllerModel controllerModel = theJcpp.get2DHub()
-                .getController2DModel();
+		final IChemObjectSelection selection = new LogicalSelection(
+				LogicalSelection.Type.NONE);
+		theJcpp.getRenderPanel().getRenderer().getRenderer2DModel()
+				.setSelection(selection);
+	}
 
-        String atomNumbers = getParameter("atomNumbersVisible");
-        if (atomNumbers != null) {
-            if (atomNumbers.equals("true"))
-                rendererModel.setDrawNumbers(true);
-        }
+	/**
+	 * Gives basic information about the applet.
+	 * 
+	 * @see java.applet.Applet#getAppletInfo()
+	 */
+	@Override
+	public String getAppletInfo() {
+		return appletInfo;
+	}
 
-        String background = getParameter("background");
-        if (background != null) {
-            if (background.indexOf("#") == 0)
-                rendererModel.setBackColor(Color.decode(background));
-            else
-                rendererModel.setBackColor(new Color(Integer
-                        .parseInt(background)));
-            theJcpp.getRenderPanel()
-                    .setBackground(rendererModel.getBackColor());
-        }
+	/**
+	 * @return Returns the jexf.
+	 */
+	private JExternalFrame getJexf() {
+		if (jexf == null) {
+			jexf = new JExternalFrame();
+		}
+		return jexf;
+	}
 
-        if (getParameter("compact") != null
-                && getParameter("compact").equals("true")) {
-            rendererModel.setIsCompact(true);
-        }
+	/**
+	 * Gives a mol file of the current molecules in the editor (not reactions).
+	 * RGroup queries are also saved as .mol files by convention.
+	 * 
+	 * @return The mol file
+	 * @throws CDKException
+	 */
+	public String getMolFile() throws CDKException {
 
-        if (getParameter("tooltips") != null) {
-            StringTokenizer st = new StringTokenizer(getParameter("tooltips"),
-                    "|");
-            IAtomContainer container = theJcpp.getChemModel().getBuilder()
-                    .newInstance(IAtomContainer.class);
-            Iterator<IAtomContainer> containers = ChemModelManipulator
-                    .getAllAtomContainers(chemModel).iterator();
+		final StringWriter sw = new StringWriter();
+		final org.openscience.cdk.interfaces.IChemModel som = theJcpp
+				.getChemModel();
 
-            while (containers.hasNext()) {
-                IAtomContainer ac=containers.next();
-                container.add(ac);
-            }
+		if (theJcpp.get2DHub().getRGroupHandler() != null) {
+			final RGroupQueryWriter rgw = new RGroupQueryWriter(sw);
+			rgw.write(theJcpp.get2DHub().getRGroupHandler().getrGroupQuery());
+		} else {
+			final MDLV2000Writer mdlwriter = new MDLV2000Writer(sw);
+			mdlwriter.write(som);
+		}
+		return sw.toString();
+	}
 
-            while (st.hasMoreTokens()) {
-                IAtom atom = container
-                        .getAtom(Integer.parseInt(st.nextToken()) - 1);
-                rendererModel.getToolTipTextMap().put(atom, st.nextToken());
-            }
-            rendererModel.setShowTooltip(true);
-        }
+	/**
+	 * Tells the molecular formula of the model. This includes all fragments
+	 * currently displayed and all their implicit and explicit Hs.
+	 * 
+	 * @return The formula.
+	 */
+	public String getMolFormula() {
+		return theJcpp.get2DHub().getFormula();
+	}
 
-        if (getParameter("dotranslate") != null
-                && getParameter("dotranslate").equals("false")) {
-            GT.setDoTranslate(false);
-        }
+	/**
+	 * Tells the mass of the model. This includes all fragments currently
+	 * displayed and all their implicit and explicit Hs. Masses of elements are
+	 * those of natural abundance. Isotopes are not considered.
+	 * 
+	 * @return
+	 */
+	public double getMolMass() {
+		final IMolecularFormula wholeModel = theJcpp.get2DHub().getIChemModel()
+				.getBuilder().newInstance(IMolecularFormula.class);
+		final Iterator<IAtomContainer> containers = ChemModelManipulator
+				.getAllAtomContainers(theJcpp.get2DHub().getIChemModel())
+				.iterator();
+		int implicitHs = 0;
+		while (containers.hasNext()) {
+			for (final IAtom atom : containers.next().atoms()) {
+				wholeModel.addIsotope(atom);
+				if (atom.getImplicitHydrogenCount() != null) {
+					implicitHs += atom.getImplicitHydrogenCount();
+				}
+			}
+		}
+		try {
+			if (implicitHs > 0) {
+				wholeModel.addIsotope(
+						IsotopeFactory.getInstance(wholeModel.getBuilder())
+								.getMajorIsotope(1), implicitHs);
+			}
+		} catch (final IOException e) {
+			// do nothing
+		}
+		return MolecularFormulaManipulator.getNaturalExactMass(wholeModel);
+	}
 
-        if (getParameter("language") != null) {
-            GT.setLanguage(getParameter("language"));
-            theJcpp.updateMenusWithLanguage();
-        }
-        
-        if (getParameter("debug") != null
-                && getParameter("debug").equals("true")) {
-            this.debug = true;
-        }
+	/**
+	 * Gives informations about applet params.
+	 * 
+	 * @see java.applet.Applet#getParameterInfo()
+	 */
+	@Override
+	public String[][] getParameterInfo() {
+		return paramInfo;
+	}
 
-        if ( (getParameter("impliciths") == null) ||
-        	 (getParameter("impliciths") != null && getParameter("impliciths").equals("true")) 
-           ) {
-            controllerModel.setAutoUpdateImplicitHydrogens(true);
-            rendererModel.setShowImplicitHydrogens(true);
-            rendererModel.setShowEndCarbons(true);
-        } else {
-            controllerModel.setAutoUpdateImplicitHydrogens(false);
-            rendererModel.setShowImplicitHydrogens(false);
-            rendererModel.setShowEndCarbons(false);
+	/**
+	 * Gives a smiles of the current editor content
+	 * 
+	 * @return The smiles
+	 * @throws CloneNotSupportedException
+	 * @throws IOException
+	 * @throws ClassNotFoundException
+	 * @throws CDKException
+	 */
+	public String getSmiles() throws CDKException, ClassNotFoundException,
+			IOException, CloneNotSupportedException {
+		return CreateSmilesAction.getSmiles(theJcpp.getChemModel());
+	}
 
-            if (chemModel != null) {
-                List<IAtomContainer> atomContainers = ChemModelManipulator
-                        .getAllAtomContainers(chemModel);
-                for (int i = 0; i < atomContainers.size(); i++) {
-                    try {
-                        CDKHydrogenAdder.getInstance(
-                                atomContainers.get(i).getBuilder())
-                                .addImplicitHydrogens(atomContainers.get(i));
-                    } catch (CDKException e) {
-                        // do nothing
-                    }
-                }
-            }
-        }
-    }
+	/**
+	 * Gives a chiral smiles of the current editor content
+	 * 
+	 * @return The smiles
+	 * @throws CloneNotSupportedException
+	 * @throws IOException
+	 * @throws ClassNotFoundException
+	 * @throws CDKException
+	 */
+	public String getSmilesChiral() throws CDKException,
+			ClassNotFoundException, IOException, CloneNotSupportedException {
+		return CreateSmilesAction.getChiralSmiles(theJcpp.getChemModel());
+	}
 
-    /**
-     * NOT FOR USE FROM JavaScript.
-     */
-    @Override
-    public void init() {
-        String resource = "org.openscience.jchempaint.resources.features";
-        ResourceBundle featuresDefinition = ResourceBundle.getBundle(resource, Locale.getDefault());
-        Iterator<String> featuresit = featuresDefinition.keySet().iterator();
-        while(featuresit.hasNext()){
-        	String feature = featuresit.next();
-        	if (getParameter(feature) != null
-                    && getParameter(feature).equals("off")) {
-        		blacklist.add(feature);
-        		String[] members = StringHelper.tokenize(featuresDefinition.getString(feature));
-        		for(int i=0;i<members.length;i++){
-        			blacklist.add(members[i]);
-        		}
-        	}
-        }
-        prepareExternalFrame();
-    }
+	/**
+	 * @return Returns the theJcpp.
+	 */
+	private AbstractJChemPaintPanel getTheJcpp() {
+		return theJcpp;
+	}
 
-    /**
-     * NOT FOR USE FROM JavaScript.
-     */
-    @Override
-    public void stop() {
-    }
+	/**
+	 * NOT FOR USE FROM JavaScript.
+	 */
+	@Override
+	public void init() {
+		final String resource = "org.openscience.jchempaint.resources.features";
+		final ResourceBundle featuresDefinition = ResourceBundle.getBundle(
+				resource, Locale.getDefault());
+		final Iterator<String> featuresit = featuresDefinition.keySet()
+				.iterator();
+		while (featuresit.hasNext()) {
+			final String feature = featuresit.next();
+			if (getParameter(feature) != null
+					&& getParameter(feature).equals("off")) {
+				blacklist.add(feature);
+				final String[] members = StringHelper
+						.tokenize(featuresDefinition.getString(feature));
+				for (final String member : members) {
+					blacklist.add(member);
+				}
+			}
+		}
+		prepareExternalFrame();
+	}
 
-    /**
-     * @return Returns the theJcpp.
-     */
-    private AbstractJChemPaintPanel getTheJcpp() {
-        return theJcpp;
-    }
+	/**
+	 * loads a molecule from url or smiles
+	 */
+	protected void loadModelFromParam() {
+		URL fileURL = null;
+		String smiles = null;
+		String mol = null;
+		try {
+			final URL documentBase = getDocumentBase();
+			final String load = getParameter("load");
+			if (load != null) {
+				fileURL = new URL(documentBase, load);
+			}
+			smiles = getParameter("smiles");
+			mol = getParameter("mol");
+		} catch (final Exception exception) {
+			theJcpp.announceError(exception);
+		}
+		if (fileURL != null) {
+			loadModelFromUrl(fileURL, theJcpp);
+		}
+		if (smiles != null) {
+			loadModelFromSmiles(smiles);
+		}
+		if (mol != null) {
+			try {
+				setMolFileWithReplace(mol);
+			} catch (final Exception exception) {
+				theJcpp.announceError(exception);
+			}
+		}
+	}
 
-    /**
-     * @param theJcpp
-     *            The theJcpp to set.
-     */
-    protected void setTheJcpp(AbstractJChemPaintPanel theJcpp) {
-        this.theJcpp = theJcpp;
-    }
+	/**
+	 * Loads a molecule from a smiles into jcp
+	 * 
+	 * @param fileURL
+	 */
+	public void loadModelFromSmiles(final String smiles) {
+		if (smiles != null) {
+			try {
+				final SmilesParser sp = new SmilesParser(
+						DefaultChemObjectBuilder.getInstance());
+				final IAtomContainer mol = sp.parseSmiles(smiles);
 
-    /**
-     * Gives a mol file of the current molecules in the editor (not reactions).
-     * RGroup queries are also saved as .mol files by convention.
-     * 
-     * @return The mol file
-     * @throws CDKException
-     */
-    public String getMolFile() throws CDKException {
+				// for some reason, smilesparser sets valencies, which we don't
+				// want in jcp
+				for (int i = 0; i < mol.getAtomCount(); i++) {
+					mol.getAtom(i).setValency(null);
+				}
+				JChemPaint.generateModel(theJcpp, mol, true, false);
+				/*
+				 * StructureDiagramGenerator sdg = new
+				 * StructureDiagramGenerator(); sdg.setMolecule(mol);
+				 * sdg.generateCoordinates(new Vector2d(0, 1)); mol =
+				 * sdg.getMolecule(); mol = new
+				 * FixBondOrdersTool().kekuliseAromaticRings(mol);
+				 * 
+				 * IChemModel chemModel = DefaultChemObjectBuilder.getInstance()
+				 * .newInstance(IChemModel.class);
+				 * chemModel.setMoleculeSet(DefaultChemObjectBuilder
+				 * .getInstance() .newInstance(IMoleculeSet.class));
+				 * chemModel.getMoleculeSet().addAtomContainer(mol);
+				 * theJcpp.setChemModel(chemModel);
+				 * 
+				 * IUndoRedoFactory undoRedoFactory=
+				 * theJcpp.get2DHub().getUndoRedoFactory(); UndoRedoHandler
+				 * undoRedoHandler= theJcpp.get2DHub().getUndoRedoHandler();
+				 * 
+				 * if (undoRedoFactory!=null) { IUndoRedoable undoredo =
+				 * undoRedoFactory
+				 * .getAddAtomsAndBondsEdit(theJcpp.get2DHub().getIChemModel(),
+				 * mol, null, "Paste", theJcpp.get2DHub());
+				 * undoRedoHandler.postEdit(undoredo); }
+				 * theJcpp.updateUndoRedoControls();
+				 */
 
-        StringWriter sw = new StringWriter();
-        org.openscience.cdk.interfaces.IChemModel som = theJcpp.getChemModel();
+			} catch (final Exception exception) {
+				theJcpp.announceError(exception);
+			}
+		} else {
+			theJcpp.setChemModel(new ChemModel());
+		}
+	}
 
-    	if (theJcpp.get2DHub().getRGroupHandler()!=null) {
-    		RGroupQueryWriter rgw = new RGroupQueryWriter (sw);
-    		rgw.write(theJcpp.get2DHub().getRGroupHandler().getrGroupQuery());
-    	}
-    	else {
-            MDLV2000Writer mdlwriter = new MDLV2000Writer(sw);
-            mdlwriter.write(som);
-    	}
-        return (sw.toString());
-    }
+	/**
+	 * Loads a molecule from a url into jcp
+	 * 
+	 * @param fileURL
+	 */
+	public void loadModelFromUrl(final URL fileURL,
+			final AbstractJChemPaintPanel panel) {
+		try {
+			final IChemModel chemModel = JChemPaint.readFromFileReader(fileURL,
+					fileURL.toString(), null, panel);
+			theJcpp.setChemModel(chemModel);
+		} catch (final Exception exception) {
+			theJcpp.announceError(exception);
+		}
+	}
 
-    
-    /**
-     * Gives a smiles of the current editor content
-     * 
-     * @return The smiles
-     * @throws CloneNotSupportedException
-     * @throws IOException
-     * @throws ClassNotFoundException
-     * @throws CDKException
-     */
-    public String getSmiles() throws CDKException, ClassNotFoundException,
-            IOException, CloneNotSupportedException {
-        return CreateSmilesAction.getSmiles(theJcpp.getChemModel());
-    }
+	/**
+	 * Makes all implicit hydrogens explicit (same as using
+	 * Edit->Hydrogens->Make all Implicit Hydrogens Explicit)
+	 */
+	public void makeHydrogensExplicit() {
+		getTheJcpp().get2DHub().makeAllImplicitExplicit();
+		getTheJcpp().repaint();
+	}
 
-    /**
-     * Gives a chiral smiles of the current editor content
-     * 
-     * @return The smiles
-     * @throws CloneNotSupportedException
-     * @throws IOException
-     * @throws ClassNotFoundException
-     * @throws CDKException
-     */
-    public String getSmilesChiral() throws CDKException,
-            ClassNotFoundException, IOException, CloneNotSupportedException {
-        return CreateSmilesAction.getChiralSmiles(theJcpp.getChemModel());
-    }
+	/**
+	 * Makes all explicit hydrogens implicit (same as using
+	 * Edit->Hydrogens->Make all Explicit Hydrogens Implicit)
+	 */
+	public void makeHydrogensImplicit() {
+		getTheJcpp().get2DHub().makeAllExplicitImplicit();
+		getTheJcpp().repaint();
+	}
 
-    /**
-     * This method sets a structure in the editor and leaves the old one. This
-     * method replaces all \n characters with the system line separator. This
-     * can be used when setting a mol file in an applet without knowing which
-     * platform the applet is running on.
-     * 
-     * @param mol
-     *            The mol file to set (V2000)
-     * @throws Exception
-     */
-    public void addMolFileWithReplace(String mol) throws Exception {
-        StringBuffer newmol = new StringBuffer();
-        int s = 0;
-        int e = 0;
-        while ((e = mol.indexOf("\\n", s)) >= 0) {
-            newmol.append(mol.substring(s, e));
-            newmol.append(System.getProperty("line.separator"));
-            s = e + 2;
-        }
-        newmol.append(mol.substring(s));
-        MDLV2000Reader reader = new MDLV2000Reader(new StringReader(newmol
-                .toString()));
-        IMolecule cdkmol = (IMolecule) reader.read(DefaultChemObjectBuilder
-                .getInstance().newInstance(IAtomContainer.class));
-        JChemPaint.generateModel(theJcpp, cdkmol, false,false);
-        theJcpp.get2DHub().updateView();
-        // the newly opened file should nicely fit the screen
-        theJcpp.getRenderPanel().setFitToScreen(true);
-        theJcpp.getRenderPanel().update(
-                theJcpp.getRenderPanel().getGraphics());
-        // enable zooming by removing constraint
-        theJcpp.getRenderPanel().setFitToScreen(false);
-    }
+	/**
+	 * sets title for external frame adds listener for double clicks in order to
+	 * open external frame
+	 */
+	private void prepareExternalFrame() {
+		if (getParameter("name") != null) {
+			getJexf().setTitle(getParameter("name"));
+		}
+		if (getParameter("detachable") != null
+				&& getParameter("detachable").equals("true")) {
+			getTheJcpp().getRenderPanel().addMouseListener(new MouseAdapter() {
+				@Override
+				public void mousePressed(final MouseEvent e) {
+					Container applet = (Container) e.getSource();
+					while (!(applet instanceof JChemPaintEditorApplet || applet instanceof JChemPaintViewerApplet)) {
+						applet = applet.getParent();
+					}
+					if (e.getButton() == 1 && e.getClickCount() == 2
+							&& applet instanceof JChemPaintViewerApplet) {
+						if (!getJexf().isShowing()) {
+							getJexf().show(getTheJcpp());
+						}
+					}
+				}
+			});
+		}
+		if (getParameter("detachableeditor") != null
+				&& getParameter("detachableeditor").equals("true")) {
+			getTheJcpp().getRenderPanel().addMouseListener(new MouseAdapter() {
+				@Override
+				public void mousePressed(final MouseEvent e) {
+					Container applet = (Container) e.getSource();
+					while (!(applet instanceof JChemPaintEditorApplet || applet instanceof JChemPaintViewerApplet)) {
+						applet = applet.getParent();
+					}
+					if (e.getButton() == 1 && e.getClickCount() == 2
+							&& applet instanceof JChemPaintViewerApplet) {
+						if (!getJexf().isShowing()) {
+							final JChemPaintPanel p = new JChemPaintPanel(
+									theJcpp.getChemModel(),
+									JChemPaintEditorApplet.GUI_APPLET, debug,
+									JChemPaintAbstractApplet.this, blacklist);
+							p.setName("appletframe");
+							p.setShowInsertTextField(false);
+							p.setShowStatusBar(false);
+							p.getChemModel().setID("JChemPaint Editor");
+							getJexf();
+							jexf.setTitle("JChemPaint Editor");
+							jexf.add(p);
+							jexf.pack();
+							jexf.setVisible(true);
+							jexf.addWindowListener(new WindowAdapter() {
+								@Override
+								public void windowClosing(final WindowEvent e) {
+									JChemPaintAbstractApplet.this
+											.setChemModel(p.getChemModel());
+								}
+							});
+						}
+					}
+				}
+			});
+		}
+	}
 
-    /**
-     * This method sets a new structure in the editor and removes the old one.
-     * This method replaces all \n characters with the system line separator.
-     * This can be used when setting a mol file in an applet without knowing
-     * which platform the applet is running on.
-     * 
-     * @param mol
-     *            The mol file to set
-     * @throws CDKException
-     */
-    public void setMolFileWithReplace(String mol) throws CDKException {
-        StringBuffer newmol = new StringBuffer();
-        int s = 0;
-        int e = 0;
-        while ((e = mol.indexOf("\\n", s)) >= 0) {
-            newmol.append(mol.substring(s, e));
-            newmol.append(System.getProperty("line.separator"));
-            s = e + 2;
-        }
-        setMolFile(newmol.toString());
-    }
+	/**
+	 * A method for highlighting atoms from JavaScript
+	 * 
+	 * @param atom
+	 *            The atom number (starting with 0), -1 sets empty selection.
+	 */
+	public void selectAtom(final int atom) {
+		final RendererModel rendererModel = theJcpp.get2DHub().getRenderer()
+				.getRenderer2DModel();
+		final IChemModel chemModel = theJcpp.getChemModel();
+		rendererModel.setExternalHighlightColor(Color.RED);
+		final IAtomContainer ac = chemModel.getMoleculeSet().getBuilder()
+				.newInstance(IAtomContainer.class);
+		if (atom != -1) {
+			ac.addAtom(chemModel.getMoleculeSet().getAtomContainer(0)
+					.getAtom(atom));
+			rendererModel.setExternalSelectedPart(ac);
+		} else {
+			rendererModel.setExternalSelectedPart(null);
+		}
+		getTheJcpp().get2DHub().updateView();
+	}
 
-    /**
-     * This method sets a new structure in the editor and removes the old one.
-     * 
-     * @param mol
-     * @throws Exception
-     */
-    public void setMolFile(String mol) throws CDKException {
-       
-    	ISimpleChemObjectReader cor=null;
-    	IChemModel chemModel = null;
+	protected void setChemModel(final IChemModel chemModel) {
+		theJcpp.setChemModel(chemModel);
+		theJcpp.get2DHub().updateView();
+	}
 
-    	if (mol.contains("$RGP")) {
-    		cor= new RGroupQueryReader(new StringReader(mol)); 
-    		chemModel=JChemPaint.getChemModelFromReader(cor, theJcpp);
-    	}
-    	else {
-    		cor= new MDLV2000Reader(new StringReader(mol), Mode.RELAXED); 
-    		chemModel=JChemPaint.getChemModelFromReader(cor, theJcpp);
-    		JChemPaint.cleanUpChemModel(chemModel,true, theJcpp);
-    	}
+	/**
+	 * This method sets a new structure in the editor and removes the old one.
+	 * 
+	 * @param mol
+	 * @throws Exception
+	 */
+	public void setMolFile(final String mol) throws CDKException {
 
-    	theJcpp.setChemModel(chemModel);
-        theJcpp.get2DHub().updateView();
+		ISimpleChemObjectReader cor = null;
+		IChemModel chemModel = null;
 
-        // the newly opened file should nicely fit the screen
-        theJcpp.getRenderPanel().setFitToScreen(true);
-        theJcpp.getRenderPanel().update(theJcpp.getRenderPanel().getGraphics());
-        // ..enable zooming by removing constraint again
-        theJcpp.getRenderPanel().setFitToScreen(false);
+		if (mol.contains("$RGP")) {
+			cor = new RGroupQueryReader(new StringReader(mol));
+			chemModel = JChemPaint.getChemModelFromReader(cor, theJcpp);
+		} else {
+			cor = new MDLV2000Reader(new StringReader(mol), Mode.RELAXED);
+			chemModel = JChemPaint.getChemModelFromReader(cor, theJcpp);
+			JChemPaint.cleanUpChemModel(chemModel, true, theJcpp);
+		}
 
-    }
+		theJcpp.setChemModel(chemModel);
+		theJcpp.get2DHub().updateView();
 
-    /**
-     * Clears the applet
-     */
-    public void clear() {
-        theJcpp.get2DHub().zap();
-        theJcpp.get2DHub().updateView();
-        theJcpp.getRenderPanel().getRenderer().getRenderer2DModel()
-                .setZoomFactor(1);
+		// the newly opened file should nicely fit the screen
+		theJcpp.getRenderPanel().setFitToScreen(true);
+		theJcpp.getRenderPanel().update(theJcpp.getRenderPanel().getGraphics());
+		// ..enable zooming by removing constraint again
+		theJcpp.getRenderPanel().setFitToScreen(false);
 
-        IChemObjectSelection selection = new LogicalSelection(
-                LogicalSelection.Type.NONE);
-        theJcpp.getRenderPanel().getRenderer().getRenderer2DModel()
-                .setSelection(selection);
-    }
+	}
 
-    /**
-     * A method for highlighting atoms from JavaScript
-     * 
-     * @param atom
-     *            The atom number (starting with 0), -1 sets empty selection.
-     */
-    public void selectAtom(int atom) {
-        RendererModel rendererModel = theJcpp.get2DHub().getRenderer()
-                .getRenderer2DModel();
-        IChemModel chemModel = theJcpp.getChemModel();
-        rendererModel.setExternalHighlightColor(Color.RED);
-        IAtomContainer ac = chemModel.getMoleculeSet().getBuilder()
-                .newInstance(IAtomContainer.class);
-        if(atom!=-1){
-            ac.addAtom(chemModel.getMoleculeSet().getMolecule(0).getAtom(atom));
-            rendererModel.setExternalSelectedPart(ac);
-        }else{
-            rendererModel.setExternalSelectedPart(null);
-        }
-        getTheJcpp().get2DHub().updateView();
-    }
+	/**
+	 * This method sets a new structure in the editor and removes the old one.
+	 * This method replaces all \n characters with the system line separator.
+	 * This can be used when setting a mol file in an applet without knowing
+	 * which platform the applet is running on.
+	 * 
+	 * @param mol
+	 *            The mol file to set
+	 * @throws CDKException
+	 */
+	public void setMolFileWithReplace(final String mol) throws CDKException {
+		final StringBuffer newmol = new StringBuffer();
+		int s = 0;
+		int e = 0;
+		while ((e = mol.indexOf("\\n", s)) >= 0) {
+			newmol.append(mol.substring(s, e));
+			newmol.append(System.getProperty("line.separator"));
+			s = e + 2;
+		}
+		setMolFile(newmol.toString());
+	}
 
-    /**
-     * Makes all implicit hydrogens explicit (same as using
-     * Edit->Hydrogens->Make all Implicit Hydrogens Explicit)
-     */
-    public void makeHydrogensExplicit() {
-        getTheJcpp().get2DHub().makeAllImplicitExplicit();
-        getTheJcpp().repaint();
-    }
+	public void setSmiles(final String smiles) {
+		loadModelFromSmiles(smiles);
+		theJcpp.get2DHub().updateView();
+		repaint();
+	}
 
-    /**
-     * Makes all explicit hydrogens implicit (same as using
-     * Edit->Hydrogens->Make all Explicit Hydrogens Implicit)
-     */
-    public void makeHydrogensImplicit() {
-        getTheJcpp().get2DHub().makeAllExplicitImplicit();
-        getTheJcpp().repaint();
-    }
-    
-    /**
-     * Tells the mass of the model. This includes all fragments 
-     * currently displayed and all their implicit and explicit Hs. 
-     * Masses of elements are those of natural abundance. Isotopes are not considered.
-     * 
-     * @return
-     */
-    public double getMolMass(){
-        IMolecularFormula wholeModel = theJcpp.get2DHub().getIChemModel().getBuilder()
-            .newInstance(IMolecularFormula.class);
-        Iterator<IAtomContainer> containers = ChemModelManipulator
-            .getAllAtomContainers(theJcpp.get2DHub().getIChemModel()).iterator();
-        int implicitHs = 0;
-        while (containers.hasNext()) {
-            for (IAtom atom : containers.next().atoms()) {
-                wholeModel.addIsotope(atom);
-                if (atom.getImplicitHydrogenCount() != null) {
-                    implicitHs += atom.getImplicitHydrogenCount();
-                }
-            }
-        }
-        try {
-            if (implicitHs > 0)
-                wholeModel.addIsotope(IsotopeFactory.getInstance(
-                        wholeModel.getBuilder()).getMajorIsotope(1),
-                        implicitHs);
-        } catch (IOException e) {
-        // do nothing
-        }
-        return MolecularFormulaManipulator.getNaturalExactMass(wholeModel);
-    }
+	/**
+	 * @param theJcpp
+	 *            The theJcpp to set.
+	 */
+	protected void setTheJcpp(final AbstractJChemPaintPanel theJcpp) {
+		this.theJcpp = theJcpp;
+	}
 
-    /**
-     * Tells the molecular formula of the model. This includes all fragments 
-     * currently displayed and all their implicit and explicit Hs.
-     * 
-     * @return The formula.
-     */
-    public String getMolFormula(){
-        return theJcpp.get2DHub().getFormula();
-    }
+	/**
+	 * NOT FOR USE FROM JavaScript.
+	 */
+	@Override
+	public void start() {
+		// Parameter parsing goes here
+		loadModelFromParam();
+		final RendererModel rendererModel = theJcpp.get2DHub().getRenderer()
+				.getRenderer2DModel();
+		final IChemModel chemModel = theJcpp.getChemModel();
+		final IControllerModel controllerModel = theJcpp.get2DHub()
+				.getController2DModel();
 
-    /**
-     * @return Returns the jexf.
-     */
-    private JExternalFrame getJexf() {
-        if (jexf == null)
-            jexf = new JExternalFrame();
-        return jexf;
-    }
+		final String atomNumbers = getParameter("atomNumbersVisible");
+		if (atomNumbers != null) {
+			if (atomNumbers.equals("true")) {
+				rendererModel.setDrawNumbers(true);
+			}
+		}
 
-    /**
-     * sets title for external frame adds listener for double clicks in order to
-     * open external frame
-     */
-    private void prepareExternalFrame() {
-        if (this.getParameter("name") != null)
-            getJexf().setTitle(this.getParameter("name"));
-        if (getParameter("detachable") != null
-                && getParameter("detachable").equals("true")) {
-            getTheJcpp().getRenderPanel().addMouseListener(new MouseAdapter() {
-                public void mousePressed(MouseEvent e) {
-                    Container applet = (Container)e.getSource();
-                    while(!(applet instanceof JChemPaintEditorApplet || applet instanceof JChemPaintViewerApplet)){
-                        applet=applet.getParent();
-                    }
-                    if (e.getButton() == 1 && e.getClickCount() == 2 && applet instanceof JChemPaintViewerApplet)
-                        if (!getJexf().isShowing()) {
-                            getJexf().show(getTheJcpp());
-                        }
-                }
-            });
-        }
-        if (getParameter("detachableeditor") != null
-                && getParameter("detachableeditor").equals("true")) {
-            getTheJcpp().getRenderPanel().addMouseListener(new MouseAdapter() {
-                public void mousePressed(MouseEvent e) {
-                    Container applet = (Container)e.getSource();
-                    while(!(applet instanceof JChemPaintEditorApplet || applet instanceof JChemPaintViewerApplet)){
-                        applet=applet.getParent();
-                    }
-                    if (e.getButton() == 1 && e.getClickCount() == 2 && applet instanceof JChemPaintViewerApplet)
-                        if (!getJexf().isShowing()) {
-                            final JChemPaintPanel p = new JChemPaintPanel(theJcpp.getChemModel(),JChemPaintEditorApplet.GUI_APPLET,debug,JChemPaintAbstractApplet.this, blacklist);
-                            p.setName("appletframe");
-                            p.setShowInsertTextField(false);
-                            p.setShowStatusBar(false);
-                            p.getChemModel().setID("JChemPaint Editor");
-                            getJexf();
-                            jexf.setTitle("JChemPaint Editor");
-                            jexf.add(p);
-                            jexf.pack();
-                            jexf.setVisible(true);
-                            jexf.addWindowListener(new WindowAdapter(){
-                                public void windowClosing(WindowEvent e) {
-                                    JChemPaintAbstractApplet.this.setChemModel(p.getChemModel());
-                                }
-                            });
-                        }
-                }
-            });
-        }
-    }
+		final String background = getParameter("background");
+		if (background != null) {
+			if (background.indexOf("#") == 0) {
+				rendererModel.setBackColor(Color.decode(background));
+			} else {
+				rendererModel.setBackColor(new Color(Integer
+						.parseInt(background)));
+			}
+			theJcpp.getRenderPanel()
+					.setBackground(rendererModel.getBackColor());
+		}
 
-    protected void setChemModel(IChemModel chemModel) {
-        theJcpp.setChemModel(chemModel);
-        theJcpp.get2DHub().updateView();
-    }
+		if (getParameter("compact") != null
+				&& getParameter("compact").equals("true")) {
+			rendererModel.setIsCompact(true);
+		}
+
+		if (getParameter("tooltips") != null) {
+			final StringTokenizer st = new StringTokenizer(
+					getParameter("tooltips"), "|");
+			final IAtomContainer container = theJcpp.getChemModel()
+					.getBuilder().newInstance(IAtomContainer.class);
+			final Iterator<IAtomContainer> containers = ChemModelManipulator
+					.getAllAtomContainers(chemModel).iterator();
+
+			while (containers.hasNext()) {
+				final IAtomContainer ac = containers.next();
+				container.add(ac);
+			}
+
+			while (st.hasMoreTokens()) {
+				final IAtom atom = container.getAtom(Integer.parseInt(st
+						.nextToken()) - 1);
+				rendererModel.getToolTipTextMap().put(atom, st.nextToken());
+			}
+			rendererModel.setShowTooltip(true);
+		}
+
+		if (getParameter("dotranslate") != null
+				&& getParameter("dotranslate").equals("false")) {
+			GT.setDoTranslate(false);
+		}
+
+		if (getParameter("language") != null) {
+			GT.setLanguage(getParameter("language"));
+			theJcpp.updateMenusWithLanguage();
+		}
+
+		if (getParameter("debug") != null
+				&& getParameter("debug").equals("true")) {
+			debug = true;
+		}
+
+		if (getParameter("impliciths") == null
+				|| getParameter("impliciths") != null
+				&& getParameter("impliciths").equals("true")) {
+			controllerModel.setAutoUpdateImplicitHydrogens(true);
+			rendererModel.setShowImplicitHydrogens(true);
+			rendererModel.setShowEndCarbons(true);
+		} else {
+			controllerModel.setAutoUpdateImplicitHydrogens(false);
+			rendererModel.setShowImplicitHydrogens(false);
+			rendererModel.setShowEndCarbons(false);
+
+			if (chemModel != null) {
+				final List<IAtomContainer> atomContainers = ChemModelManipulator
+						.getAllAtomContainers(chemModel);
+				for (int i = 0; i < atomContainers.size(); i++) {
+					try {
+						CDKHydrogenAdder.getInstance(
+								atomContainers.get(i).getBuilder())
+								.addImplicitHydrogens(atomContainers.get(i));
+					} catch (final CDKException e) {
+						// do nothing
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * NOT FOR USE FROM JavaScript.
+	 */
+	@Override
+	public void stop() {
+	}
 }

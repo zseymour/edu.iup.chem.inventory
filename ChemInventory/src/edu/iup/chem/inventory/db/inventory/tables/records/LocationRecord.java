@@ -3,8 +3,11 @@
  */
 package edu.iup.chem.inventory.db.inventory.tables.records;
 
+import edu.iup.chem.inventory.Utils;
 import edu.iup.chem.inventory.amount.ChemicalAmount;
 import edu.iup.chem.inventory.amount.ChemicalAmountFactory;
+import edu.iup.chem.inventory.amount.InventoryAmount;
+import edu.iup.chem.inventory.amount.InventoryAmountFactory;
 import edu.iup.chem.inventory.dao.ChemicalDao;
 
 /**
@@ -17,6 +20,9 @@ public class LocationRecord
 
 	private static final long	serialVersionUID	= -1191398649;
 	private ChemicalAmount		amount				= null;
+	private InventoryAmount		invAmount			= null;
+
+	private ChemicalRecord		chemical			= null;
 
 	/**
 	 * Create a detached LocationRecord
@@ -44,6 +50,11 @@ public class LocationRecord
 	 */
 	public java.sql.Date getArrival() {
 		return getValue(edu.iup.chem.inventory.db.inventory.tables.Location.LOCATION.ARRIVAL);
+	}
+
+	public String getBottle() {
+		return (getType() == null || getType().equals("null") ? "" : getType())
+				+ getBottleNo();
 	}
 
 	/**
@@ -74,6 +85,22 @@ public class LocationRecord
 		return amount;
 	}
 
+	public ChemicalRecord getChemicalRecord() {
+		if (chemical == null) {
+			chemical = ChemicalDao.getById(getCid());
+		}
+
+		return chemical;
+	}
+
+	public Integer getCid() {
+		return getValue(edu.iup.chem.inventory.db.inventory.tables.Location.LOCATION.CID);
+	}
+
+	public String getDescription() {
+		return getValue(edu.iup.chem.inventory.db.inventory.tables.Location.LOCATION.DESCRIPTION);
+	}
+
 	/**
 	 * The table column <code>inventory.location.expiration</code>
 	 */
@@ -88,8 +115,17 @@ public class LocationRecord
 		return getValue(edu.iup.chem.inventory.db.inventory.tables.Location.LOCATION.INSTRUCTOR);
 	}
 
+	public InventoryAmount getInventoryAmount() {
+		if (invAmount == null) {
+			invAmount = InventoryAmountFactory.getAmount(getChemicalAmount(),
+					getChemicalRecord().getDensityWithUnits());
+		}
+
+		return invAmount;
+	}
+
 	public String getName() {
-		return ChemicalDao.getNameByCAS(getCas());
+		return getChemicalRecord().getName();
 	}
 
 	/**
@@ -118,6 +154,10 @@ public class LocationRecord
 	 */
 	public java.lang.String getSupplier() {
 		return getValue(edu.iup.chem.inventory.db.inventory.tables.Location.LOCATION.SUPPLIER);
+	}
+
+	public java.lang.String getType() {
+		return getValue(edu.iup.chem.inventory.db.inventory.tables.Location.LOCATION.TYPE);
 	}
 
 	/**
@@ -154,6 +194,12 @@ public class LocationRecord
 				value);
 	}
 
+	public void setBottle(final String value) {
+		final String[] values = Utils.splitBottle(value);
+		setType(values[0]);
+		setBottleNo(Integer.parseInt(values[1]));
+	}
+
 	/**
 	 * The table column <code>inventory.location.bottle_no</code>
 	 * <p>
@@ -174,6 +220,24 @@ public class LocationRecord
 				value);
 	}
 
+	public void setChemicalAmount(final ChemicalAmount am) {
+		amount = am;
+		setAmount(am.getQuantity());
+		setUnits(am.getUnit());
+	}
+
+	public void setCid(final Integer value) {
+		setValue(
+				edu.iup.chem.inventory.db.inventory.tables.Location.LOCATION.CID,
+				value);
+	}
+
+	public void setDescription(final String value) {
+		setValue(
+				edu.iup.chem.inventory.db.inventory.tables.Location.LOCATION.DESCRIPTION,
+				value);
+	}
+
 	/**
 	 * The table column <code>inventory.location.expiration</code>
 	 */
@@ -190,6 +254,12 @@ public class LocationRecord
 		setValue(
 				edu.iup.chem.inventory.db.inventory.tables.Location.LOCATION.INSTRUCTOR,
 				value);
+	}
+
+	public void setInventoryAmount(final ChemicalAmount am) {
+		setChemicalAmount(am);
+		invAmount = InventoryAmountFactory.getAmount(am, getChemicalRecord()
+				.getDensityWithUnits());
 	}
 
 	/**
@@ -225,6 +295,12 @@ public class LocationRecord
 	public void setSupplier(final java.lang.String value) {
 		setValue(
 				edu.iup.chem.inventory.db.inventory.tables.Location.LOCATION.SUPPLIER,
+				value);
+	}
+
+	public void setType(final String value) {
+		setValue(
+				edu.iup.chem.inventory.db.inventory.tables.Location.LOCATION.TYPE,
 				value);
 	}
 

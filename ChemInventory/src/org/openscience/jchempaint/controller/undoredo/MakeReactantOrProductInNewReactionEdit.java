@@ -23,87 +23,57 @@
  */
 package org.openscience.jchempaint.controller.undoredo;
 
-import java.util.Iterator;
-
-import org.openscience.cdk.atomtype.CDKAtomTypeMatcher;
-import org.openscience.cdk.graph.ConnectivityChecker;
-import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IAtomType;
-import org.openscience.cdk.interfaces.IBond;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IChemModel;
-import org.openscience.cdk.interfaces.IMolecule;
-import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.interfaces.IReaction;
 import org.openscience.cdk.interfaces.IReactionSet;
-import org.openscience.cdk.tools.CDKHydrogenAdder;
-import org.openscience.cdk.tools.manipulator.AtomTypeManipulator;
-import org.openscience.cdk.tools.manipulator.ChemModelManipulator;
 import org.openscience.cdk.tools.manipulator.ReactionSetManipulator;
-import org.openscience.jchempaint.controller.IControllerModel;
 
 /**
  * @cdk.module controlextra
- * @cdk.svnrev  $Revision: 13311 $
+ * @cdk.svnrev $Revision: 13311 $
  */
 public class MakeReactantOrProductInNewReactionEdit implements IUndoRedoable {
 
-    private static final long serialVersionUID = -7667903450980188402L;
+	private static final long		serialVersionUID	= -7667903450980188402L;
 
-	private IAtomContainer movedContainer;
+	private final IAtomContainer	movedContainer;
 
-	private IAtomContainer oldContainer;
+	private final IAtomContainer	oldContainer;
 
-	private String type;
-	
-	private IChemModel chemModel;
-	
-	private String reactionID;
-	
-	private boolean reactantOrProduct;
-	
+	private final String			type;
+
+	private final IChemModel		chemModel;
+
+	private final String			reactionID;
+
+	private final boolean			reactantOrProduct;
 
 	/**
 	 * @param chemModel
 	 * @param undoRedoContainer
-	 * @param c2dm The controller model; if none, set to null
+	 * @param c2dm
+	 *            The controller model; if none, set to null
 	 */
-	public MakeReactantOrProductInNewReactionEdit(IChemModel chemModel, IAtomContainer ac, IAtomContainer oldcontainer, boolean reactantOrProduct, String type) {
+	public MakeReactantOrProductInNewReactionEdit(final IChemModel chemModel,
+			final IAtomContainer ac, final IAtomContainer oldcontainer,
+			final boolean reactantOrProduct, final String type) {
 		this.type = type;
-		this.movedContainer = ac;
-		this.oldContainer = oldcontainer;
+		movedContainer = ac;
+		oldContainer = oldcontainer;
 		this.chemModel = chemModel;
-		this.reactionID = ReactionSetManipulator.getReactionByAtomContainerID(chemModel.getReactionSet(), movedContainer.getID()).getID();
+		reactionID = ReactionSetManipulator.getReactionByAtomContainerID(
+				chemModel.getReactionSet(), movedContainer.getID()).getID();
 		this.reactantOrProduct = reactantOrProduct;
 	}
 
-	public void redo() {
-		chemModel.getMoleculeSet().removeAtomContainer(movedContainer);
-		IReaction reaction = chemModel.getBuilder().newInstance(IReaction.class);
-		reaction.setID(reactionID);
-		IMolecule mol=chemModel.getBuilder().newInstance(IMolecule.class,movedContainer);
-		mol.setID(movedContainer.getID());
-		if(reactantOrProduct)
-			reaction.addReactant(mol);
-		else
-			reaction.addProduct(mol);
-		if(chemModel.getReactionSet()==null)
-			chemModel.setReactionSet(chemModel.getBuilder().newInstance(IReactionSet.class));
-		chemModel.getReactionSet().addReaction(reaction);
-		chemModel.getMoleculeSet().removeAtomContainer(oldContainer);
-	}
-
-	public void undo() {
-		if(chemModel.getMoleculeSet()==null)
-			chemModel.setMoleculeSet(chemModel.getBuilder().newInstance(IMoleculeSet.class));
-		chemModel.getMoleculeSet().addAtomContainer(oldContainer);
-		chemModel.getReactionSet().removeReaction(ReactionSetManipulator.getReactionByAtomContainerID(chemModel.getReactionSet(), movedContainer.getID()));
-	}
-
+	@Override
 	public boolean canRedo() {
 		return true;
 	}
 
+	@Override
 	public boolean canUndo() {
 		return true;
 	}
@@ -115,5 +85,39 @@ public class MakeReactantOrProductInNewReactionEdit implements IUndoRedoable {
 	 */
 	public String getPresentationName() {
 		return type;
+	}
+
+	@Override
+	public void redo() {
+		chemModel.getMoleculeSet().removeAtomContainer(movedContainer);
+		final IReaction reaction = chemModel.getBuilder().newInstance(
+				IReaction.class);
+		reaction.setID(reactionID);
+		final IAtomContainer mol = chemModel.getBuilder().newInstance(
+				IAtomContainer.class, movedContainer);
+		mol.setID(movedContainer.getID());
+		if (reactantOrProduct) {
+			reaction.addReactant(mol);
+		} else {
+			reaction.addProduct(mol);
+		}
+		if (chemModel.getReactionSet() == null) {
+			chemModel.setReactionSet(chemModel.getBuilder().newInstance(
+					IReactionSet.class));
+		}
+		chemModel.getReactionSet().addReaction(reaction);
+		chemModel.getMoleculeSet().removeAtomContainer(oldContainer);
+	}
+
+	@Override
+	public void undo() {
+		if (chemModel.getMoleculeSet() == null) {
+			chemModel.setMoleculeSet(chemModel.getBuilder().newInstance(
+					IAtomContainerSet.class));
+		}
+		chemModel.getMoleculeSet().addAtomContainer(oldContainer);
+		chemModel.getReactionSet().removeReaction(
+				ReactionSetManipulator.getReactionByAtomContainerID(
+						chemModel.getReactionSet(), movedContainer.getID()));
 	}
 }

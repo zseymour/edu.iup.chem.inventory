@@ -4,7 +4,14 @@ import static edu.iup.chem.inventory.db.inventory.Tables.CANCER;
 import static edu.iup.chem.inventory.db.inventory.Tables.CHEMICAL;
 import static edu.iup.chem.inventory.db.inventory.Tables.SYNONYM;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.sql.Blob;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.jooq.Condition;
 import org.jooq.Cursor;
 import org.jooq.Record;
 import org.jooq.exception.DataAccessException;
@@ -24,8 +32,10 @@ import edu.iup.chem.inventory.db.inventory.tables.records.SynonymRecord;
 import edu.iup.chem.inventory.search.ChemicalWebSearch;
 
 public class ChemicalDao extends DataDao<ChemicalRecord> {
-	private final static Logger					LOG		= Logger.getLogger(ChemicalDao.class);
-	private static Map<String, ChemicalRecord>	RECORDS	= new HashMap<>();
+	private final static Logger					LOG			= Logger.getLogger(ChemicalDao.class);
+	private static Map<Object, ChemicalRecord>	RECORDS		= new HashMap<>();
+	private final static Condition				whereClause	= CHEMICAL.CAS
+																	.notEqual("000-00-0");
 
 	public static void delete(final ChemicalRecord rec) {
 		try (Connection conn = ConnectionPool.getConnection()) {
@@ -34,7 +44,7 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 			final InventoryFactory create = new InventoryFactory(conn);
 			rec.attach(create);
 			rec.delete();
-			LocationDao.deleteByCas(cas);
+			LocationDao.deleteById(rec.getCid());
 		} catch (final SQLException e) {
 			LOG.error("SQL Error while storing record.", e);
 		}
@@ -42,30 +52,56 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 	}
 
 	public static boolean exists(final String cas) {
+		boolean retVal = false;
 		try (Connection conn = ConnectionPool.getConnection()) {
 			final InventoryFactory create = new InventoryFactory(conn);
-
-			return create.select().from(CHEMICAL).where(CHEMICAL.CAS.eq(cas))
-					.fetchAny() != null;
+			final Record chem = create.select().from(CHEMICAL)
+					.where(CHEMICAL.CAS.eq(cas)).fetchAny();
+			retVal = chem != null;
 
 		} catch (final SQLException e) {
 			LOG.error("SQL Error while fetching chemical count.", e);
-			return false;
 		}
+
+		return retVal;
+	}
+
+	public static void forceUpdate(final ChemicalRecord rec, final String oldCas) {
+		try (Connection conn = ConnectionPool.getConnection()) {
+			// Force an UPDATE
+			final InventoryFactory create = new InventoryFactory(conn);
+			create.executeUpdate(rec, CHEMICAL.CAS.equal(oldCas));
+		} catch (final SQLException e1) {
+			LOG.error("SQL Error while storing record.", e1);
+		}
+
 	}
 
 	public static final int getAllCount() {
 		try (Connection conn = ConnectionPool.getConnection()) {
 			final InventoryFactory create = new InventoryFactory(conn);
 
-			return create.selectCount().from(CHEMICAL).fetchOne()
-					.getValueAsInteger(0, 1);
+			return create.selectCount().from(CHEMICAL).where(whereClause)
+					.fetchOne().getValueAsInteger(0, 1);
 
 		} catch (final SQLException e) {
 			LOG.error("SQL Error while fetching chemical count.", e);
 		}
 
 		return 0;
+	}
+
+	public static List<Record> getAllRecords() {
+		try (Connection conn = ConnectionPool.getConnection()) {
+			final InventoryFactory create = new InventoryFactory(conn);
+
+			return create.select().from(CHEMICAL).where(whereClause).fetch();
+
+		} catch (final SQLException e) {
+			LOG.error("SQL Error while fetching all chemicals.", e);
+		}
+
+		return new ArrayList<>();
 	}
 
 	public static ChemicalRecord getByCas(final String cas) {
@@ -77,7 +113,7 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 			final InventoryFactory create = new InventoryFactory(conn);
 
 			final ChemicalRecord rec = create.select().from(CHEMICAL)
-					.where(CHEMICAL.CAS.equal(cas)).fetchOne()
+					.where(CHEMICAL.CAS.equal(cas)).fetchAny()
 					.into(ChemicalRecord.class);
 			rec.attach(create);
 			RECORDS.put(cas, rec);
@@ -103,6 +139,27 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 		return new ArrayList<>();
 	}
 
+	public static ChemicalRecord getById(final Integer id) {
+		if (RECORDS.containsKey(id)) {
+			return RECORDS.get(id);
+		}
+
+		try (Connection conn = ConnectionPool.getConnection()) {
+			final InventoryFactory create = new InventoryFactory(conn);
+
+			final ChemicalRecord rec = create.select().from(CHEMICAL)
+					.where(CHEMICAL.CID.equal(id)).fetchOne()
+					.into(ChemicalRecord.class);
+			rec.attach(create);
+			RECORDS.put(id, rec);
+			return rec;
+		} catch (final SQLException e) {
+			LOG.error("SQL Error while fetching chemical by CAS.", e);
+		}
+
+		return null;
+	}
+
 	public static List<ChemicalRecord> getBySMILES(final String smiles) {
 		try (Connection conn = ConnectionPool.getConnection()) {
 			final InventoryFactory create = new InventoryFactory(conn);
@@ -124,13 +181,31 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 			final InventoryFactory create = new InventoryFactory(conn);
 
 			casList = create.select(CHEMICAL.CAS).from(CHEMICAL)
-					.fetch(CHEMICAL.CAS);
+					.where(whereClause).fetch(CHEMICAL.CAS);
 
 		} catch (final SQLException e) {
 			LOG.error("SQL Error while fetching all chemicals.", e);
 		}
 
 		return casList;
+	}
+
+	public static InputStream getMSDS(final String cas) {
+		try (Connection conn = ConnectionPool.getConnection()) {
+			final PreparedStatement ps = conn
+					.prepareStatement("SELECT msds FROM msds WHERE cas=?");
+			ps.setString(1, cas);
+			final ResultSet rs = ps.executeQuery();
+
+			if (rs.next()) {
+				final Blob blob = rs.getBlob("msds");
+				return blob.getBinaryStream();
+			}
+		} catch (final SQLException e) {
+			LOG.error("Unable to establish connection to fetch MSDS.", e);
+		}
+
+		return null;
 	}
 
 	public static String getNameByCAS(final String cas) {
@@ -148,9 +223,27 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 					.into(SynonymRecord.class);
 		} catch (final SQLException e) {
 			LOG.error("SQL Error while fetching synonyms.", e.getCause());
+		} catch (final NullPointerException e) {
+			storeNames(getByCas(cas));
+			return getNames(cas);
 		}
 
 		return null;
+	}
+
+	public static boolean hasMSDS(final String cas) {
+		try (Connection conn = ConnectionPool.getConnection()) {
+			final PreparedStatement ps = conn
+					.prepareStatement("SELECT msds FROM msds WHERE cas=?");
+			ps.setString(1, cas);
+			final ResultSet rs = ps.executeQuery();
+
+			return rs.next();
+		} catch (final SQLException e) {
+			LOG.error("Unable to establish connection to fetch MSDS.", e);
+		}
+
+		return false;
 	}
 
 	public static boolean isCarcinogenic(final ChemicalRecord rec) {
@@ -169,12 +262,25 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 
 	}
 
-	public static void store(final ChemicalRecord rec) {
+	public static Integer lastID() {
+		try (Connection conn = ConnectionPool.getConnection()) {
+			final InventoryFactory create = new InventoryFactory(conn);
+			final Integer id = create.lastID().intValue();
+			LOG.debug("Last insert ID: " + id);
+			return id;
+		} catch (final SQLException e) {
+			LOG.warn("Failed to fetch last ID. Returning null.");
+			return null;
+		}
+	}
+
+	public static ChemicalRecord store(final ChemicalRecord rec) {
 		try (Connection conn = ConnectionPool.getConnection()) {
 			LOG.debug("Inserting/updating new ChemicalRecord");
 			final InventoryFactory create = new InventoryFactory(conn);
 			rec.attach(create);
 			rec.store();
+			return rec;
 		} catch (final SQLException e) {
 			LOG.error("SQL Error while storing record.", e);
 		} catch (final DataAccessException e) {
@@ -182,11 +288,38 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 			try (Connection conn = ConnectionPool.getConnection()) {
 				// Force an UPDATE
 				final InventoryFactory create = new InventoryFactory(conn);
-				create.executeUpdate(rec, CHEMICAL.CAS.equal(rec.getCas()));
+				create.executeUpdate(rec, CHEMICAL.CID.equal(rec.getCid()));
+
+				return rec;
 			} catch (final SQLException e1) {
 				LOG.error("SQL Error while storing record.", e1);
 			}
 		}
+
+		return null;
+
+	}
+
+	public static boolean storeMSDS(final ChemicalRecord chemicalRecord,
+			final File msds) {
+		try (Connection conn = ConnectionPool.getConnection()) {
+			final PreparedStatement ps = conn
+					.prepareStatement("REPLACE INTO msds (cas, msds) VALUES (?,?)");
+
+			final FileInputStream in = new FileInputStream(msds);
+
+			ps.setString(1, chemicalRecord.getCas());
+			ps.setBinaryStream(2, in, (int) msds.length());
+			ps.executeUpdate();
+			chemicalRecord.recheckComplete();
+			return true;
+		} catch (final SQLException e) {
+			LOG.error("Error establishing connection to store MSDS.", e);
+		} catch (final FileNotFoundException e) {
+			LOG.error("Error converting MSDS for storage (File not found.)", e);
+		}
+
+		return false;
 
 	}
 
@@ -195,7 +328,11 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 		try (Connection conn = ConnectionPool.getConnection()) {
 			LOG.debug("Inserting/updating synonyms for " + record.getName());
 			final InventoryFactory create = new InventoryFactory(conn);
-			final String names = ChemicalWebSearch.getNames(record.getInchi());
+			String id = record.getInchi();
+			if (id == null) {
+				id = record.getSmiles();
+			}
+			final String names = ChemicalWebSearch.getNames(id);
 			syns.setCas(record.getCas());
 			syns.setNames(names);
 			syns.attach(create);
@@ -219,7 +356,7 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 		try (Connection conn = ConnectionPool.getConnection()) {
 			final InventoryFactory create = new InventoryFactory(conn);
 
-			return create.select().from(CHEMICAL).fetch()
+			return create.select().from(CHEMICAL).where(whereClause).fetch()
 					.into(ChemicalRecord.class);
 
 		} catch (final SQLException e) {
@@ -235,7 +372,8 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 			final Connection conn = ConnectionPool.getConnection();
 			final InventoryFactory create = new InventoryFactory(conn);
 
-			return create.select().from(CHEMICAL).fetchLazy();
+			return create.select().from(CHEMICAL).where(whereClause)
+					.fetchLazy();
 
 		} catch (final SQLException e) {
 			LOG.error("SQL Error while fetching all chemicals lazily.", e);
@@ -243,4 +381,5 @@ public class ChemicalDao extends DataDao<ChemicalRecord> {
 
 		return null;
 	}
+
 }

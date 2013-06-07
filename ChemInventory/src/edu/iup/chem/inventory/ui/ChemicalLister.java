@@ -1,7 +1,12 @@
 package edu.iup.chem.inventory.ui;
 
-public interface ChemicalLister {
-	public void deleteRows();
+import edu.iup.chem.inventory.db.inventory.tables.records.ChemicalRecord;
 
-	public void fireChemicalsAdded();
+public interface ChemicalLister {
+
+	void deleteRows(boolean deleteFromDB);
+
+	public void fireChemicalsAdded(ChemicalRecord rec);
+
+	public ChemicalRecord getSelectedChemical();
 }

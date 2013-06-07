@@ -38,10 +38,10 @@ import javax.vecmath.Vector2d;
 
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IChemModel;
 import org.openscience.cdk.interfaces.IElectronContainer;
-import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.interfaces.IReactionSet;
 import org.openscience.cdk.isomorphism.matchers.RGroup;
 import org.openscience.cdk.isomorphism.matchers.RGroupList;
@@ -49,45 +49,93 @@ import org.openscience.jchempaint.controller.IChemModelRelay;
 import org.openscience.jchempaint.rgroups.RGroupHandler;
 
 /**
- * This interface needs to be implemented in an application to return instances of classes 
- * extending the implementations of IUndoRedoable suitable for the respective gui framework 
- * (e. g. swing or swt).
+ * This interface needs to be implemented in an application to return instances
+ * of classes extending the implementations of IUndoRedoable suitable for the
+ * respective gui framework (e. g. swing or swt).
  * 
  * @cdk.module control
  */
 public interface IUndoRedoFactory {
-	public IUndoRedoable getAddAtomsAndBondsEdit(IChemModel chemModel, IAtomContainer undoRedoContainer, IAtomContainer removedAtomContainer, String type, IChemModelRelay c2dm);
-	public IUndoRedoable getAdjustBondOrdersEdit(Map<IBond,
-		IBond.Order[]> changedBonds,
-		Map<IBond, IBond.Stereo[]> changedBondsStereo, String type,
-		IChemModelRelay chemModelRelay
-	);
-	public IUndoRedoable getChangeAtomSymbolEdit(IAtom atom, String formerSymbol, String symbol, String type, IChemModelRelay chemModelRelay);
-	public IUndoRedoable getChangeChargeEdit(IAtom atomInRange, int formerCharge, int newCharge, String type, IChemModelRelay chemModelRelay);
-	public IUndoRedoable getMoveAtomEdit(IAtomContainer undoRedoContainer, Vector2d offset, String type);
-	public IUndoRedoable getRemoveAtomsAndBondsEdit(IChemModel chemModel, IAtomContainer undoRedoContainer, String type, IChemModelRelay chemModelRelay);
-	public IUndoRedoable getReplaceAtomEdit(IChemModel chemModel, IAtom oldAtom, IAtom newAtom, String type);
-	public IUndoRedoable getSingleElectronEdit(IAtomContainer relevantContainer, IElectronContainer electronContainer, boolean add, IChemModelRelay chemModelRelay, IAtom atom, String type);
-	public IUndoRedoable getChangeIsotopeEdit(IAtom atom, Integer formerIsotopeNumber, Integer newIstopeNumber, String type);
-	public IUndoRedoable getClearAllEdit(IChemModel chemModel, IMoleculeSet som, IReactionSet sor, String type);
-	public IUndoRedoable getChangeCoordsEdit(Map<IAtom, Point2d[]> atomCoordsMap, String type);
-	public IUndoRedoable getMakeReactantOrProductInNewReactionEdit(IChemModel chemModel, IAtomContainer ac, IAtomContainer oldcontainer, boolean reactantOrProduct, String type);
+	public IUndoRedoable getAddAtomsAndBondsEdit(IChemModel chemModel,
+			IAtomContainer undoRedoContainer,
+			IAtomContainer removedAtomContainer, String type,
+			IChemModelRelay c2dm);
+
+	public IUndoRedoable getAdjustBondOrdersEdit(
+			Map<IBond, IBond.Order[]> changedBonds,
+			Map<IBond, IBond.Stereo[]> changedBondsStereo, String type,
+			IChemModelRelay chemModelRelay);
+
+	public IUndoRedoable getChangeAtomSymbolEdit(IAtom atom,
+			String formerSymbol, String symbol, String type,
+			IChemModelRelay chemModelRelay);
+
+	public IUndoRedoable getChangeChargeEdit(IAtom atomInRange,
+			int formerCharge, int newCharge, String type,
+			IChemModelRelay chemModelRelay);
+
+	public IUndoRedoable getChangeCoordsEdit(
+			Map<IAtom, Point2d[]> atomCoordsMap, String type);
+
+	public IUndoRedoable getChangeHydrogenCountEdit(
+			Map<IAtom, Integer[]> atomHydrogenCountsMap, String type);
+
+	public IUndoRedoable getChangeIsotopeEdit(IAtom atom,
+			Integer formerIsotopeNumber, Integer newIstopeNumber, String type);
+
+	public IUndoRedoable getChangeValenceEdit(IAtom atomInRange,
+			Integer formerValence, Integer valence, String text,
+			IChemModelRelay chemModelRelay);
+
+	public IUndoRedoable getClearAllEdit(IChemModel chemModel,
+			IAtomContainerSet som, IReactionSet sor, String type);
+
+	public IUndoRedoable getLoadNewModelEdit(IChemModel chemModel,
+			IChemModelRelay relay, IAtomContainerSet oldsom,
+			IReactionSet oldsor, IAtomContainerSet newsom, IReactionSet newsor,
+			String type);
+
 	public IUndoRedoable getMakeReactantOrProductInExistingReactionEdit(
 			IChemModel chemModel, IAtomContainer newContainer,
-			IAtomContainer oldcontainer, String s, boolean reactantOrProduct, String string);
-	public IUndoRedoable getMergeMoleculesEdit(List<IAtom> deletedAtom, List<IAtomContainer> containers, 
-			List<IAtomContainer> droppedContainers, List<List<IBond>> deletedBonds, 
-			List<Map<IBond, Integer>> bondsWithReplacedAtom, Vector2d offset, List<IAtom> atomwhichwasmoved, 
-			IUndoRedoable moveundoredo, 
-			Map<Integer,Map<Integer,Integer>> oldRgrpHash, Map<Integer,Map<Integer,Integer>> newGrgpHash, 
-			String type, IChemModelRelay c2dm);
-	public IUndoRedoable getChangeHydrogenCountEdit(Map<IAtom, Integer[]> atomHydrogenCountsMap, String type);
-	public IUndoRedoable getLoadNewModelEdit(IChemModel chemModel, IChemModelRelay relay, IMoleculeSet oldsom, IReactionSet oldsor, IMoleculeSet newsom, IReactionSet newsor, String type);
-	public IUndoRedoable getChangeValenceEdit(IAtom atomInRange, Integer formerValence,
-			Integer valence, String text, IChemModelRelay chemModelRelay);
-	public IUndoRedoable getRGroupEdit(String type, boolean isNewRGroup,IChemModelRelay hub,RGroupHandler rgrpHandler
-	        , Map<IAtom,IAtomContainer> existingAtomDistr, Map<IBond,IAtomContainer> existingBondDistr
-	        , IAtomContainer existingRoot, Map<IAtom, Map<Integer, IBond>> existingRootAttachmentPoints, Map<RGroup, Map<Integer,IAtom>> existingRGroupApo
-	        , Map<Integer,RGroupList> rgroupLists,IAtomContainer userSelection);
+			IAtomContainer oldcontainer, String s, boolean reactantOrProduct,
+			String string);
+
+	public IUndoRedoable getMakeReactantOrProductInNewReactionEdit(
+			IChemModel chemModel, IAtomContainer ac,
+			IAtomContainer oldcontainer, boolean reactantOrProduct, String type);
+
+	public IUndoRedoable getMergeMoleculesEdit(List<IAtom> deletedAtom,
+			List<IAtomContainer> containers,
+			List<IAtomContainer> droppedContainers,
+			List<List<IBond>> deletedBonds,
+			List<Map<IBond, Integer>> bondsWithReplacedAtom, Vector2d offset,
+			List<IAtom> atomwhichwasmoved, IUndoRedoable moveundoredo,
+			Map<Integer, Map<Integer, Integer>> oldRgrpHash,
+			Map<Integer, Map<Integer, Integer>> newGrgpHash, String type,
+			IChemModelRelay c2dm);
+
+	public IUndoRedoable getMoveAtomEdit(IAtomContainer undoRedoContainer,
+			Vector2d offset, String type);
+
+	public IUndoRedoable getRemoveAtomsAndBondsEdit(IChemModel chemModel,
+			IAtomContainer undoRedoContainer, String type,
+			IChemModelRelay chemModelRelay);
+
+	public IUndoRedoable getReplaceAtomEdit(IChemModel chemModel,
+			IAtom oldAtom, IAtom newAtom, String type);
+
+	public IUndoRedoable getRGroupEdit(String type, boolean isNewRGroup,
+			IChemModelRelay hub, RGroupHandler rgrpHandler,
+			Map<IAtom, IAtomContainer> existingAtomDistr,
+			Map<IBond, IAtomContainer> existingBondDistr,
+			IAtomContainer existingRoot,
+			Map<IAtom, Map<Integer, IBond>> existingRootAttachmentPoints,
+			Map<RGroup, Map<Integer, IAtom>> existingRGroupApo,
+			Map<Integer, RGroupList> rgroupLists, IAtomContainer userSelection);
+
+	public IUndoRedoable getSingleElectronEdit(
+			IAtomContainer relevantContainer,
+			IElectronContainer electronContainer, boolean add,
+			IChemModelRelay chemModelRelay, IAtom atom, String type);
 
 }

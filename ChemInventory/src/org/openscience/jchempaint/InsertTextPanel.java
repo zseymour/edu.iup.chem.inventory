@@ -49,11 +49,11 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.text.JTextComponent;
 
+import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.Molecule;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
-import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.FixBondOrdersTool;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.jchempaint.application.JChemPaint;
@@ -117,7 +117,7 @@ public class InsertTextPanel extends JPanel implements ActionListener {
 		final String actionCommand = actionEvent.getActionCommand();
 		if (actionCommand.equals("comboBoxEdited")
 				|| actionCommand.equals(GT._("Insert"))) {
-			final IMolecule molecule = getMolecule();
+			final IAtomContainer molecule = getMolecule();
 			if (molecule == null) {
 				return;
 			}
@@ -147,9 +147,9 @@ public class InsertTextPanel extends JPanel implements ActionListener {
 		return data;
 	}
 
-	private IMolecule getMolecule() {
+	private IAtomContainer getMolecule() {
 
-		IMolecule molecule = new Molecule();
+		IAtomContainer molecule = new AtomContainer();
 		String text = (String) textCombo.getSelectedItem();
 		text = text.trim(); // clean up extra white space
 
@@ -163,7 +163,7 @@ public class InsertTextPanel extends JPanel implements ActionListener {
 			// StdInChIParser parser = new StdInChIParser();
 			// IAtomContainer atomContainer = parser.parseInchi(text);
 			// molecule =
-			// atomContainer.getBuilder().newInstance(IMolecule.class,atomContainer);
+			// atomContainer.getBuilder().newInstance(IAtomContainer.class,atomContainer);
 			//
 			//
 			// } catch (Exception e2) {
@@ -213,7 +213,8 @@ public class InsertTextPanel extends JPanel implements ActionListener {
 		return molecule;
 	}
 
-	private IMolecule getMoleculeFromCAS(final String cas) throws IOException {
+	private IAtomContainer getMoleculeFromCAS(final String cas)
+			throws IOException {
 		final String firstURL = "http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=pccompound&term="
 				+ cas;
 		String data = getDataFromURL(firstURL);
@@ -262,7 +263,7 @@ public class InsertTextPanel extends JPanel implements ActionListener {
 		final SmilesParser smilesParser = new SmilesParser(
 				DefaultChemObjectBuilder.getInstance());
 		try {
-			final IMolecule mol = smilesParser.parseSmiles(smiles);
+			final IAtomContainer mol = smilesParser.parseSmiles(smiles);
 			// for some reason, smilesparser sets valencies, which we don't want
 			// in jcp
 			for (int i = 0; i < mol.getAtomCount(); i++) {

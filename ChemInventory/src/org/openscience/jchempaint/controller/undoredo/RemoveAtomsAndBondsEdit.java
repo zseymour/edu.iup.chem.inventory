@@ -29,102 +29,111 @@ import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IChemModel;
-import org.openscience.cdk.interfaces.IMolecule;
-import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.tools.manipulator.ChemModelManipulator;
 import org.openscience.jchempaint.controller.IChemModelRelay;
 
 /**
  * @cdk.module controlbasic
- * @cdk.svnrev  $Revision: 10979 $
+ * @cdk.svnrev $Revision: 10979 $
  */
 public class RemoveAtomsAndBondsEdit implements IUndoRedoable {
 
-    private static final long serialVersionUID = -143712173063846054L;
+	private static final long		serialVersionUID	= -143712173063846054L;
 
-    private String type;
+	private final String			type;
 
-	private IAtomContainer undoRedoContainer;
+	private final IAtomContainer	undoRedoContainer;
 
-	private IChemModel chemModel;
+	private final IChemModel		chemModel;
 
-	private IAtomContainer container;
-	
-	private IChemModelRelay chemModelRelay=null;
+	private final IAtomContainer	container;
 
-	public RemoveAtomsAndBondsEdit(IChemModel chemModel,
-			IAtomContainer undoRedoContainer, String type, IChemModelRelay chemModelRelay) {
+	private IChemModelRelay			chemModelRelay		= null;
+
+	public RemoveAtomsAndBondsEdit(final IChemModel chemModel,
+			final IAtomContainer undoRedoContainer, final String type,
+			final IChemModelRelay chemModelRelay) {
 		this.chemModel = chemModel;
 		this.undoRedoContainer = undoRedoContainer;
-		this.container = chemModel.getBuilder().newInstance(IAtomContainer.class);
-    	Iterator<IAtomContainer> containers = ChemModelManipulator.getAllAtomContainers(chemModel).iterator();
-    	while (containers.hasNext()) {
-    		container.add((IAtomContainer)containers.next());
-    	}
+		container = chemModel.getBuilder().newInstance(IAtomContainer.class);
+		final Iterator<IAtomContainer> containers = ChemModelManipulator
+				.getAllAtomContainers(chemModel).iterator();
+		while (containers.hasNext()) {
+			container.add(containers.next());
+		}
 		this.type = type;
-		this.chemModelRelay=chemModelRelay;
+		this.chemModelRelay = chemModelRelay;
 	}
 
-	public void redo() {
-		for (int i = 0; i < undoRedoContainer.getBondCount(); i++) {
-			IBond bond = undoRedoContainer.getBond(i);
-			container.removeBond(bond);
-		}
-		for (int i = 0; i < undoRedoContainer.getAtomCount(); i++) {
-			IAtom atom = undoRedoContainer.getAtom(i);
-			container.removeAtom(atom);
-		}
-		chemModelRelay.updateAtoms(container, container.atoms());
-		IMolecule molecule = container.getBuilder().newInstance(IMolecule.class,container);
-		IMoleculeSet moleculeSet = ConnectivityChecker
-				.partitionIntoMolecules(molecule);
-		chemModel.setMoleculeSet(moleculeSet);
-		if (chemModelRelay.getRGroupHandler()!=null) {
-			try {
-				chemModelRelay.getRGroupHandler().adjustAtomContainers(moleculeSet);
-			} catch (CDKException e) {
-				e.printStackTrace();
-				chemModelRelay.unsetRGroupHandler();
-			}
-		}
-	}
-
-	public void undo() {
-		for (int i = 0; i < undoRedoContainer.getBondCount(); i++) {
-			IBond bond = undoRedoContainer.getBond(i);
-			container.addBond(bond);
-		}
-		for (int i = 0; i < undoRedoContainer.getAtomCount(); i++) {
-			IAtom atom = undoRedoContainer.getAtom(i);
-			container.addAtom(atom);
-		}
-		chemModelRelay.updateAtoms(container, container.atoms());
-		IMolecule molecule = container.getBuilder().newInstance(IMolecule.class,container);
-		IMoleculeSet moleculeSet = ConnectivityChecker
-				.partitionIntoMolecules(molecule);
-		chemModel.setMoleculeSet(moleculeSet);
-		if (chemModelRelay.getRGroupHandler()!=null) {
-			try {
-				chemModelRelay.getRGroupHandler().adjustAtomContainers(moleculeSet);
-			} catch (CDKException e) {
-				chemModelRelay.unsetRGroupHandler();
-				e.printStackTrace();
-			}
-		}
-	}
-
+	@Override
 	public boolean canRedo() {
 		return true;
 	}
 
+	@Override
 	public boolean canUndo() {
 		return true;
 	}
 
 	public String getPresentationName() {
 		return type;
+	}
+
+	@Override
+	public void redo() {
+		for (int i = 0; i < undoRedoContainer.getBondCount(); i++) {
+			final IBond bond = undoRedoContainer.getBond(i);
+			container.removeBond(bond);
+		}
+		for (int i = 0; i < undoRedoContainer.getAtomCount(); i++) {
+			final IAtom atom = undoRedoContainer.getAtom(i);
+			container.removeAtom(atom);
+		}
+		chemModelRelay.updateAtoms(container, container.atoms());
+		final IAtomContainer molecule = container.getBuilder().newInstance(
+				IAtomContainer.class, container);
+		final IAtomContainerSet moleculeSet = ConnectivityChecker
+				.partitionIntoMolecules(molecule);
+		chemModel.setMoleculeSet(moleculeSet);
+		if (chemModelRelay.getRGroupHandler() != null) {
+			try {
+				chemModelRelay.getRGroupHandler().adjustAtomContainers(
+						moleculeSet);
+			} catch (final CDKException e) {
+				e.printStackTrace();
+				chemModelRelay.unsetRGroupHandler();
+			}
+		}
+	}
+
+	@Override
+	public void undo() {
+		for (int i = 0; i < undoRedoContainer.getBondCount(); i++) {
+			final IBond bond = undoRedoContainer.getBond(i);
+			container.addBond(bond);
+		}
+		for (int i = 0; i < undoRedoContainer.getAtomCount(); i++) {
+			final IAtom atom = undoRedoContainer.getAtom(i);
+			container.addAtom(atom);
+		}
+		chemModelRelay.updateAtoms(container, container.atoms());
+		final IAtomContainer molecule = container.getBuilder().newInstance(
+				IAtomContainer.class, container);
+		final IAtomContainerSet moleculeSet = ConnectivityChecker
+				.partitionIntoMolecules(molecule);
+		chemModel.setMoleculeSet(moleculeSet);
+		if (chemModelRelay.getRGroupHandler() != null) {
+			try {
+				chemModelRelay.getRGroupHandler().adjustAtomContainers(
+						moleculeSet);
+			} catch (final CDKException e) {
+				chemModelRelay.unsetRGroupHandler();
+				e.printStackTrace();
+			}
+		}
 	}
 
 }

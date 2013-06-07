@@ -1,65 +1,32 @@
 package edu.iup.chem.inventory.wizard;
 
-import java.awt.Dimension;
 import java.util.List;
-
-import javax.swing.JComboBox;
-import javax.swing.JLabel;
 
 import org.apache.log4j.Logger;
 import org.ciscavate.cjwizard.WizardPage;
 import org.ciscavate.cjwizard.WizardSettings;
-import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
-import org.jdesktop.swingx.combobox.ListComboBoxModel;
 
-import edu.iup.chem.inventory.dao.ChemicalDao;
 import edu.iup.chem.inventory.db.inventory.tables.records.ChemicalRecord;
 
 public class NewBottlePageFactory extends InventoryPageFactory {
-	private static final Logger	log	= Logger.getLogger(NewBottlePageFactory.class);
+	private static final Logger		log	= Logger.getLogger(NewBottlePageFactory.class);
+	private static ChemicalRecord	rec;
+
+	public NewBottlePageFactory(final ChemicalRecord selectedChemical) {
+		rec = selectedChemical;
+	}
 
 	@Override
-	protected WizardPage buildPage(final int pageNo,
-			final WizardSettings settings) {
+	protected WizardPage buildPage(int pageNo, final WizardSettings settings) {
+		if (settings.containsKey("next")) {
+			pageNo = (int) settings.get("next");
+		}
+
 		switch (pageNo) {
 			case 0:
-				return new WizardPage("Choose CAS Number",
-						"Enter CAS number for the new bottle.") {
-					{
-						log.debug("Settings: " + settings);
-						final ListComboBoxModel<String> casModel = new ListComboBoxModel<>(
-								ChemicalDao.getListOfCAS());
-						final JComboBox<String> field = new JComboBox<>(
-								casModel);
-						AutoCompleteDecorator.decorate(field);
-
-						field.setName("cas");
-
-						field.setPreferredSize(new Dimension(75, 20));
-						add(new JLabel("Enter CAS Number:"));
-						add(field);
-					}
-
-					@Override
-					public void updateSettings(final WizardSettings newSettings) {
-						super.updateSettings(newSettings);
-
-						final String cas = (String) newSettings.get("cas");
-
-						if (ChemicalDao.exists(cas)) {
-							final ChemicalRecord rec = ChemicalDao
-									.getByCas(cas);
-
-							newSettings.put("chemicalRecord", rec);
-						} else {
-
-						}
-
-					}
-				};
-			case 1:
+				settings.put("chemicalRecord", rec);
 				return new VerifyBottleWizardPage(settings);
-			case 2:
+			case 1:
 				return new WizardPage("Complete Entry?",
 						"Press Finish to enter the new bottle.") {
 					@Override

@@ -56,22 +56,21 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.cli.UnrecognizedOptionException;
+import org.openscience.cdk.AtomContainer;
+import org.openscience.cdk.AtomContainerSet;
 import org.openscience.cdk.ChemFile;
 import org.openscience.cdk.ChemModel;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.Molecule;
-import org.openscience.cdk.MoleculeSet;
 import org.openscience.cdk.atomtype.CDKAtomTypeMatcher;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.geometry.GeometryTools;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IAtomType;
 import org.openscience.cdk.interfaces.IChemFile;
 import org.openscience.cdk.interfaces.IChemModel;
 import org.openscience.cdk.interfaces.IChemObject;
-import org.openscience.cdk.interfaces.IMolecule;
-import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.interfaces.IPseudoAtom;
 import org.openscience.cdk.interfaces.IReaction;
 import org.openscience.cdk.interfaces.IReactionSet;
@@ -108,7 +107,8 @@ public class JChemPaint {
 			throws CDKException {
 		for (final IAtomContainer next : ChemModelManipulator
 				.getAllAtomContainers(chemModel)) {
-			if (GeometryTools.has2DCoordinatesNew(next) != 2) {
+			if (!GeometryTools.get2DCoordinateCoverage(next).equals(
+					GeometryTools.CoordinateCoverage.FULL)) {
 				final String error = GT._("Not all atoms have 2D coordinates."
 						+ " JCP can only show full 2D specified structures."
 						+ " Shall we lay out the structure?");
@@ -172,9 +172,9 @@ public class JChemPaint {
 			throw new CDKException(
 					"Structure does not have bonds or atoms. Cannot depict structure.");
 		}
-		JChemPaint.removeDuplicateMolecules(chemModel);
+		JChemPaint.removeDuplicateAtomContainers(chemModel);
 		JChemPaint.checkCoordinates(chemModel);
-		JChemPaint.removeEmptyMolecules(chemModel);
+		JChemPaint.removeEmptyAtomContainers(chemModel);
 
 		if (avoidOverlap) {
 			try {
@@ -216,9 +216,9 @@ public class JChemPaint {
 		final IChemModel chemModel = DefaultChemObjectBuilder.getInstance()
 				.newInstance(IChemModel.class);
 		chemModel.setMoleculeSet(chemModel.getBuilder().newInstance(
-				IMoleculeSet.class));
+				IAtomContainerSet.class));
 		chemModel.getMoleculeSet().addAtomContainer(
-				chemModel.getBuilder().newInstance(IMolecule.class));
+				chemModel.getBuilder().newInstance(IAtomContainer.class));
 		return chemModel;
 	}
 
@@ -234,7 +234,8 @@ public class JChemPaint {
 		final StructureDiagramGenerator sdg = new StructureDiagramGenerator();
 		for (int atIdx = 0; atIdx < molecules.size(); atIdx++) {
 			final IAtomContainer mol = molecules.get(atIdx);
-			sdg.setMolecule(mol.getBuilder().newInstance(IMolecule.class, mol));
+			sdg.setMolecule(mol.getBuilder().newInstance(IAtomContainer.class,
+					mol));
 			try {
 				sdg.generateCoordinates();
 			} catch (final Exception e) {
@@ -258,17 +259,17 @@ public class JChemPaint {
 	 * @throws CDKException
 	 */
 	public static void generateModel(
-			final AbstractJChemPaintPanel chemPaintPanel, IMolecule molecule,
-			final boolean generateCoordinates, final boolean shiftPasted)
-			throws CDKException {
+			final AbstractJChemPaintPanel chemPaintPanel,
+			IAtomContainer molecule, final boolean generateCoordinates,
+			final boolean shiftPasted) throws CDKException {
 		if (molecule == null) {
 			return;
 		}
 
 		final IChemModel chemModel = chemPaintPanel.getChemModel();
-		IMoleculeSet moleculeSet = chemModel.getMoleculeSet();
+		IAtomContainerSet moleculeSet = chemModel.getMoleculeSet();
 		if (moleculeSet == null) {
-			moleculeSet = new MoleculeSet();
+			moleculeSet = new AtomContainerSet();
 		}
 
 		// On copy & paste on top of an existing drawn structure, prevent the
@@ -394,10 +395,10 @@ public class JChemPaint {
 		}
 
 		// Smiles reading
-		if (cor.accepts(MoleculeSet.class) && chemModel == null) {
-			// try to read a Molecule set
+		if (cor.accepts(AtomContainerSet.class) && chemModel == null) {
+			// try to read a AtomContainer set
 			try {
-				final IMoleculeSet som = cor.read(new MoleculeSet());
+				final IAtomContainerSet som = cor.read(new AtomContainerSet());
 				chemModel = new ChemModel();
 				chemModel.setMoleculeSet(som);
 				if (chemModel == null) {
@@ -410,13 +411,13 @@ public class JChemPaint {
 		}
 
 		// MDLV3000 reading
-		if (cor.accepts(Molecule.class) && chemModel == null) {
-			// try to read a Molecule
-			final IMolecule mol = cor.read(new Molecule());
+		if (cor.accepts(AtomContainer.class) && chemModel == null) {
+			// try to read a AtomContainer
+			final IAtomContainer mol = cor.read(new AtomContainer());
 			if (mol != null) {
 				try {
-					final IMoleculeSet newSet = new MoleculeSet();
-					newSet.addMolecule(mol);
+					final IAtomContainerSet newSet = new AtomContainerSet();
+					newSet.addAtomContainer(mol);
 					chemModel = new ChemModel();
 					chemModel.setMoleculeSet(newSet);
 					if (chemModel == null) {
@@ -650,10 +651,11 @@ public class JChemPaint {
 		return chemModel;
 	}
 
-	private static void removeDuplicateMolecules(final IChemModel chemModel) {
-		// we remove molecules which are in MoleculeSet as well as in a reaction
+	private static void removeDuplicateAtomContainers(final IChemModel chemModel) {
+		// we remove molecules which are in AtomContainerSet as well as in a
+		// reaction
 		final IReactionSet reactionSet = chemModel.getReactionSet();
-		final IMoleculeSet moleculeSet = chemModel.getMoleculeSet();
+		final IAtomContainerSet moleculeSet = chemModel.getMoleculeSet();
 		if (reactionSet != null && moleculeSet != null) {
 			final List<IAtomContainer> aclist = ReactionSetManipulator
 					.getAllAtomContainers(reactionSet);
@@ -670,8 +672,8 @@ public class JChemPaint {
 		}
 	}
 
-	private static void removeEmptyMolecules(final IChemModel chemModel) {
-		final IMoleculeSet moleculeSet = chemModel.getMoleculeSet();
+	private static void removeEmptyAtomContainers(final IChemModel chemModel) {
+		final IAtomContainerSet moleculeSet = chemModel.getMoleculeSet();
 		if (moleculeSet != null && moleculeSet.getAtomContainerCount() == 0) {
 			chemModel.setMoleculeSet(null);
 		}
@@ -685,7 +687,7 @@ public class JChemPaint {
 			for (final IReaction reaction : chemModel.getReactionSet()
 					.reactions()) {
 				int i = 0;
-				final IMoleculeSet products = reaction.getProducts();
+				final IAtomContainerSet products = reaction.getProducts();
 				for (final IAtomContainer product : products.atomContainers()) {
 					try {
 						products.replaceAtomContainer(i, product.clone());
@@ -694,7 +696,7 @@ public class JChemPaint {
 					i++;
 				}
 				i = 0;
-				final IMoleculeSet reactants = reaction.getReactants();
+				final IAtomContainerSet reactants = reaction.getReactants();
 				for (final IAtomContainer reactant : reactants.atomContainers()) {
 					try {
 						reactants.replaceAtomContainer(i, reactant.clone());

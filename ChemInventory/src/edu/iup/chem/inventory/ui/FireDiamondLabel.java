@@ -1,16 +1,23 @@
 package edu.iup.chem.inventory.ui;
 
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
 
+import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 
+import org.apache.log4j.Logger;
+
+import edu.iup.chem.inventory.ConnectionPool;
+import edu.iup.chem.inventory.dao.ChemicalDao;
 import edu.iup.chem.inventory.db.inventory.enums.ChemicalNfpaS;
 import edu.iup.chem.inventory.db.inventory.tables.records.ChemicalRecord;
 
@@ -20,6 +27,8 @@ public class FireDiamondLabel extends JLabel {
 	 * 
 	 */
 	private static final long	serialVersionUID	= 4583895860597073715L;
+
+	private static final Logger	LOG					= Logger.getLogger(FireDiamondLabel.class);
 
 	private static void drawLabel(final Object hazard, final Rectangle rec,
 			final Graphics2D g2d) {
@@ -41,7 +50,10 @@ public class FireDiamondLabel extends JLabel {
 
 	public static void main(final String[] args) {
 		final JFrame frame = new JFrame();
-		final FireDiamondLabel panel = new FireDiamondLabel(1, 1, 1, "");
+		ConnectionPool.initializePool();
+
+		final ChemicalRecord r = new ChemicalDao().getAll().get(0);
+		final FireDiamondLabel panel = new FireDiamondLabel(r);
 		frame.add(panel);
 		panel.repaint();
 		frame.pack();
@@ -49,22 +61,25 @@ public class FireDiamondLabel extends JLabel {
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	}
 
-	private int			healthHazard	= 0;
-	private int			fireHazard		= 0;
-	private int			reactHazard		= 0;
-	private String		specialHazard	= "";
-	private int			startX			= 0;
-	private int			startY			= 0;
-	private int			sideLength		= 0;
-	private final Color	healthColor		= Color.BLUE;
-	private final Color	fireColor		= Color.RED;
+	private int				healthHazard	= 0;
+	private int				fireHazard		= 0;
+	private int				reactHazard		= 0;
+	private String			specialHazard	= "";
+	private int				startX			= 0;
+	private int				startY			= 0;
+	private int				sideLength		= 0;
+	private final Color		healthColor		= Color.BLUE;
+	private final Color		fireColor		= Color.RED;
 
-	private final Color	reactColor		= Color.YELLOW;
+	private final Color		reactColor		= Color.YELLOW;
 
-	private final Color	specialColor	= Color.WHITE;
+	private final Color		specialColor	= Color.WHITE;
+
+	private final Dimension	size			= new Dimension(105, 105);
 
 	public FireDiamondLabel() {
 		super();
+		setPreferredSize(size);
 	}
 
 	public FireDiamondLabel(final ChemicalRecord chemical) {
@@ -73,6 +88,8 @@ public class FireDiamondLabel extends JLabel {
 		fireHazard = chemical.getNfpaF();
 		reactHazard = chemical.getNfpaR();
 		specialHazard = chemical.getNfpaS().getLiteral();
+		setPreferredSize(size);
+		initComponents();
 	}
 
 	public FireDiamondLabel(final int healthHazard, final int fireHazard,
@@ -82,16 +99,14 @@ public class FireDiamondLabel extends JLabel {
 		this.fireHazard = fireHazard;
 		this.reactHazard = reactHazard;
 		this.specialHazard = specialHazard;
+		setPreferredSize(size);
+		initComponents();
 	}
 
-	@Override
-	public void paintComponent(final Graphics g) {
-		super.paintComponent(g);
-		final Graphics2D g2d = (Graphics2D) g;
-
-		startX = getSize().width / 2;
+	public void drawDiamond(final Graphics2D g2d) {
+		startX = size.width / 2;
 		startY = -30;
-		sideLength = getSize().width / 4;
+		sideLength = size.width / 4;
 
 		g2d.setPaint(Color.BLACK);
 		final Rectangle outline = new Rectangle(startX, startY, 2 * sideLength,
@@ -138,17 +153,38 @@ public class FireDiamondLabel extends JLabel {
 		// Draw the black numbers
 		g2d.setPaint(Color.BLACK);
 		drawLabel(reactHazard, reactRectangle, g2d);
-		if (!specialHazard.equals(ChemicalNfpaS.None.getLiteral())) {
+		if (!ChemicalNfpaS.None.getLiteral().equals(specialHazard)) {
 			drawLabel(specialHazard, specialRectangle, g2d);
 		}
-
 	}
+
+	public void initComponents() {
+		setIcon(null);
+		final Image image = new BufferedImage(size.width, size.height,
+				BufferedImage.TYPE_INT_ARGB);
+		final Graphics2D g2d = (Graphics2D) image.getGraphics();
+		drawDiamond(g2d);
+
+		setIcon(new ImageIcon(image));
+	}
+
+	// @Override
+	// public void paintComponent(final Graphics g) {
+	// LOG.debug("Drawing fire diamond");
+	// super.paintComponent(g);
+	// final Graphics2D g2d = (Graphics2D) g;
+	//
+	// drawDiamond(g2d);
+	//
+	// }
 
 	public void redraw(final ChemicalRecord chemical) {
 		healthHazard = chemical.getNfpaH();
 		fireHazard = chemical.getNfpaF();
 		reactHazard = chemical.getNfpaR();
 		specialHazard = chemical.getNfpaS().getLiteral();
-		this.repaint();
+		initComponents();
+		revalidate();
+		repaint();
 	}
 }

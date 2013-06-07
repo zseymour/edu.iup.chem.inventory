@@ -1,24 +1,16 @@
 package edu.iup.chem.inventory;
 
-import static edu.iup.chem.inventory.db.inventory.Tables.CHEMICAL;
-import static edu.iup.chem.inventory.db.inventory.Tables.LOCATION;
-import static javax.measure.unit.NonSI.LITER;
-import static javax.measure.unit.SI.GRAM;
-import static javax.measure.unit.SI.MILLI;
+import java.util.Collection;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.List;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 
 import org.apache.log4j.Logger;
 
-import edu.iup.chem.inventory.amount.ChemicalAmount;
-import edu.iup.chem.inventory.amount.ChemicalDensity;
-import edu.iup.chem.inventory.amount.ChemicalMass;
-import edu.iup.chem.inventory.amount.ChemicalVolume;
-import edu.iup.chem.inventory.db.inventory.InventoryFactory;
-import edu.iup.chem.inventory.db.inventory.tables.records.ChemicalRecord;
-import edu.iup.chem.inventory.db.inventory.tables.records.LocationRecord;
+import uk.ac.ebi.rhea.mapper.util.lucene.LuceneSearcher;
+import edu.iup.chem.inventory.index.ChemicalDirectory;
+import edu.iup.chem.inventory.index.ChemicalSearchResult;
+import edu.iup.chem.inventory.index.Index;
 
 public class Test {
 	final static Logger	log	= Logger.getLogger(Test.class);
@@ -27,32 +19,42 @@ public class Test {
 	 * @param args
 	 */
 	public static void main(final String[] args) {
+
 		ConnectionPool.initializePool();
-		try (Connection conn = ConnectionPool.getConnection()) {
-			final InventoryFactory create = new InventoryFactory(conn);
-			final List<ChemicalRecord> chemicals = create.select()
-					.from(CHEMICAL).where(CHEMICAL.CAS.eq("100-41-4")).fetch()
-					.into(ChemicalRecord.class);
-			final ChemicalRecord r = chemicals.get(0);
+		Driver.login(new JFrame());
+		Index.initializeDirectories();
 
-			final LocationRecord i = create.select().from(LOCATION)
-					.where(LOCATION.CAS.eq(r.getCas())).fetchOne()
-					.into(LocationRecord.class);
-			final ChemicalAmount am = i.getChemicalAmount();
-			final ChemicalDensity den = r.getDensity();
+		final ChemicalDirectory chemDir = Index.getChemicalDirectory();
 
-			if (am instanceof ChemicalMass) {
-				log.debug("Volume: "
-						+ am.getAmount().divide(den.getAmount())
-								.to(MILLI(LITER)));
-			} else if (am instanceof ChemicalVolume) {
-				log.debug("Mass: "
-						+ am.getAmount().times(den.getAmount()).to(GRAM));
+		final LuceneSearcher chemicalSearch = new LuceneSearcher(chemDir);
+
+		while (true) {
+			final String queryStr = JOptionPane.showInputDialog("Enter query");
+			if (queryStr == null || queryStr.length() < 1) {
+				System.exit(0);
 			}
-
-		} catch (final SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			final Collection<ChemicalSearchResult> hits = chemicalSearch
+					.searchCompoundName(queryStr);
+			log.info("Number of hits: " + hits.size());
+			log.info("-------------------------------");
+			int index = 1;
+			for (final ChemicalSearchResult hit : hits) {
+				log.info(String.format("%2d: %s (%f)", index,
+						hit.getAdditionalField(), hit.getScore()));
+				index++;
+			}
 		}
+
+		// final List<List<ChemicalRecord>> records = Index
+		// .splitChemicals(new ChemicalDao().getAll());
+		//
+		// log.info("Number of sublists: " + records.size());
+		// log.info("---------------------------------------");
+		// int index = 1;
+		// for (final List<ChemicalRecord> r : records) {
+		// log.info(String.format("List %d: %d elements", index, r.size()));
+		// index++;
+		// }
+
 	}
 }

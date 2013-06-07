@@ -10,12 +10,14 @@ import static javax.measure.unit.SI.KILOGRAM;
 import static javax.measure.unit.SI.MILLI;
 
 import javax.measure.quantity.VolumetricDensity;
+import javax.measure.unit.SI;
 import javax.measure.unit.Unit;
 
 public class ChemicalAmountFactory {
 	public static ChemicalAmount getChemicalAmount(final Double quantity,
 			final String unit) {
-		switch (unit) {
+		final String unitSwitch = unit.trim().replaceAll("\\.", "");
+		switch (unitSwitch.toLowerCase()) {
 			case "kilograms":
 			case "kilogram":
 			case "kg":
@@ -31,10 +33,12 @@ public class ChemicalAmountFactory {
 			case "mL":
 			case "milliliter":
 			case "milliliters":
+			case "ml":
 				return new ChemicalVolume(quantity, unit, MILLI(LITER));
 			case "L":
 			case "liter":
 			case "liters":
+			case "l":
 				return new ChemicalVolume(quantity, unit, LITER);
 			case "pound":
 			case "pounds":
@@ -50,16 +54,32 @@ public class ChemicalAmountFactory {
 			case "gallon":
 			case "gallons":
 				return new ChemicalVolume(quantity, unit, GALLON_LIQUID_US);
-			case "fl. oz":
+			case "fl oz":
 			case "fluid ounce":
 			case "fluid ounces":
 				return new ChemicalVolume(quantity, unit, OUNCE_LIQUID_US);
-			case "kg/m3":
+			case "specific gravity":
 				return new ChemicalDensity(quantity * 1000, unit,
 						VolumetricDensity.UNIT);
 			case "g/cu cm":
+			case "g/mL":
+			case "g/ml":
+			case "g/cc":
+			case "g/cu":
+			case "G/ML":
 				return new ChemicalDensity(quantity, "g/mL",
 						(Unit<VolumetricDensity>) GRAM.divide(MILLI(LITER)));
+			case "g/L":
+			case "g/l":
+				return new ChemicalDensity(quantity, "g/L",
+						(Unit<VolumetricDensity>) GRAM.divide(LITER));
+			case "g/cu m":
+				return new ChemicalDensity(quantity, "g/m3",
+						(Unit<VolumetricDensity>) GRAM.divide(SI.CUBIC_METRE));
+			case "mg/ml":
+				return new ChemicalDensity(quantity, "mg/mL",
+						(Unit<VolumetricDensity>) MILLI(GRAM).divide(
+								MILLI(LITER)));
 			default:
 				return null;
 		}

@@ -21,8 +21,11 @@ public class NewChemicalPageFactory extends InventoryPageFactory {
 
 	@Override
 	@SuppressWarnings("serial")
-	protected WizardPage buildPage(final int pageNo,
-			final WizardSettings settings) {
+	protected WizardPage buildPage(int pageNo, final WizardSettings settings) {
+		if (settings.containsKey("next")) {
+			pageNo = (int) settings.get("next");
+		}
+
 		switch (pageNo) {
 			case 0:
 				return new WizardPage("Choose CAS Number",
@@ -40,6 +43,13 @@ public class NewChemicalPageFactory extends InventoryPageFactory {
 						field.setPreferredSize(new Dimension(75, 20));
 						add(new JLabel("Enter CAS Number:"));
 						add(field);
+						// final ValidationGroup group = getContainer()
+						// .getValidationGroup();
+						// group.add(field,
+						// StringValidators.REQUIRE_NON_EMPTY_STRING,
+						// StringValidators.regexp("\\d{2,6}-\\d{2}-\\d",
+						// "CAS Improperly Formatted", false),
+						// new CASNotExistValidator());
 					}
 
 					@Override
@@ -47,30 +57,35 @@ public class NewChemicalPageFactory extends InventoryPageFactory {
 						super.updateSettings(newSettings);
 
 						final String cas = (String) newSettings.get("cas");
-
-						if (ChemicalDao.exists(cas)) {
-							JOptionPane
-									.showMessageDialog(this,
-											"A chemical with that CAS already exists in our database.");
-							buildPage(0, newSettings);
-							return;
-						}
-
-						final List<ChemicalRecord> options = ChemicalWebSearch
-								.searchByCAS(cas);
 						final ChemicalRecord rec;
-						if (options == null || options.isEmpty()) {
-							rec = null;
-						} else if (options.size() > 1) {
-							rec = (ChemicalRecord) JOptionPane.showInputDialog(
-									this, "Did you mean: ",
-									"Choose a chemical to add",
-									JOptionPane.QUESTION_MESSAGE, null,
-									options.toArray(), options.get(0));
-						} else {
-							rec = options.get(0);
-						}
+						if (ChemicalDao.exists(cas)) {
+							// JOptionPane
+							// .showMessageDialog(this,
+							// "A chemical with that CAS already exists in our database.");
+							// settings.put("next", 0);
+							// return;
 
+							rec = ChemicalDao.getByCas(cas);
+
+						} else {
+
+							final List<ChemicalRecord> options = ChemicalWebSearch
+									.searchByCAS(cas);
+
+							if (options == null || options.isEmpty()) {
+								rec = null;
+							} else if (options.size() > 1) {
+								rec = (ChemicalRecord) JOptionPane
+										.showInputDialog(this,
+												"Did you mean: ",
+												"Choose a chemical to add",
+												JOptionPane.QUESTION_MESSAGE,
+												null, options.toArray(),
+												options.get(0));
+							} else {
+								rec = options.get(0);
+							}
+						}
 						newSettings.put("chemicalRecord", rec);
 
 					}

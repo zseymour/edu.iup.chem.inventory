@@ -22,7 +22,7 @@ package org.openscience.jchempaint.renderer.generators;
 import java.awt.Color;
 import java.awt.geom.Rectangle2D;
 
-import org.openscience.cdk.interfaces.IMoleculeSet;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IReaction;
 import org.openscience.jchempaint.renderer.Renderer;
 import org.openscience.jchempaint.renderer.RendererModel;
@@ -35,47 +35,52 @@ import org.openscience.jchempaint.renderer.elements.TextElement;
  * 
  * @author maclean
  * @cdk.module renderextra
- *
+ * 
  */
 public class ReactionPlusGenerator implements IReactionGenerator {
 
-	public IRenderingElement generate(IReaction reaction, RendererModel model) {
-		ElementGroup diagram = new ElementGroup();
-        Color color = model.getForeColor();
-		
-		IMoleculeSet reactants = reaction.getReactants();
-		if(reactants.getAtomContainerCount()>0){
-            Rectangle2D totalBoundsReactants = Renderer.calculateBounds(reactants);
-            Rectangle2D bounds1 = 
-                Renderer.calculateBounds(reactants.getAtomContainer(0));
-            double axis = totalBoundsReactants.getCenterY();
-            for (int i = 1; i < reaction.getReactantCount(); i++) {
-            	Rectangle2D bounds2 = 
-            	    Renderer.calculateBounds(reactants.getAtomContainer(i));
-            	diagram.add(makePlus(bounds1, bounds2, axis, color));
-            	bounds1 = bounds2;
-            }
+	@Override
+	public IRenderingElement generate(final IReaction reaction,
+			final RendererModel model) {
+		final ElementGroup diagram = new ElementGroup();
+		final Color color = model.getForeColor();
+
+		final IAtomContainerSet reactants = reaction.getReactants();
+		if (reactants.getAtomContainerCount() > 0) {
+			final Rectangle2D totalBoundsReactants = Renderer
+					.calculateBounds(reactants);
+			Rectangle2D bounds1 = Renderer.calculateBounds(reactants
+					.getAtomContainer(0));
+			final double axis = totalBoundsReactants.getCenterY();
+			for (int i = 1; i < reaction.getReactantCount(); i++) {
+				final Rectangle2D bounds2 = Renderer.calculateBounds(reactants
+						.getAtomContainer(i));
+				diagram.add(makePlus(bounds1, bounds2, axis, color));
+				bounds1 = bounds2;
+			}
 		}
-        
-        IMoleculeSet products = reaction.getProducts();
-        if(products.getAtomContainerCount()>0){
-            Rectangle2D totalBoundsProducts = Renderer.calculateBounds(products);
-            double axis = totalBoundsProducts.getCenterY();
-            Rectangle2D bounds1 = Renderer.calculateBounds(products.getAtomContainer(0));
-            for (int i = 1; i < reaction.getProductCount(); i++) {
-            	Rectangle2D bounds2 = 
-            	    Renderer.calculateBounds(products.getAtomContainer(i));
-            	
-            	diagram.add(makePlus(bounds1, bounds2, axis, color));
-            	bounds1 = bounds2;
-            }
-        }
-        return diagram;
+
+		final IAtomContainerSet products = reaction.getProducts();
+		if (products.getAtomContainerCount() > 0) {
+			final Rectangle2D totalBoundsProducts = Renderer
+					.calculateBounds(products);
+			final double axis = totalBoundsProducts.getCenterY();
+			Rectangle2D bounds1 = Renderer.calculateBounds(products
+					.getAtomContainer(0));
+			for (int i = 1; i < reaction.getProductCount(); i++) {
+				final Rectangle2D bounds2 = Renderer.calculateBounds(products
+						.getAtomContainer(i));
+
+				diagram.add(makePlus(bounds1, bounds2, axis, color));
+				bounds1 = bounds2;
+			}
+		}
+		return diagram;
 	}
-	
-	public TextElement makePlus(
-	        Rectangle2D a, Rectangle2D b, double axis, Color color) {
-	    double x = (a.getCenterX() + b.getCenterX()) / 2;
-	    return new TextElement(x, axis, "+", color);
+
+	public TextElement makePlus(final Rectangle2D a, final Rectangle2D b,
+			final double axis, final Color color) {
+		final double x = (a.getCenterX() + b.getCenterX()) / 2;
+		return new TextElement(x, axis, "+", color);
 	}
 }

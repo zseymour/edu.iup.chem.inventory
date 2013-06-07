@@ -9,6 +9,7 @@ import javax.swing.table.TableCellEditor;
 
 import edu.iup.chem.inventory.amount.ChemicalAmount;
 import edu.iup.chem.inventory.amount.ChemicalAmountFactory;
+import edu.iup.chem.inventory.amount.InventoryAmount;
 
 public class AmountCellEditor extends AbstractCellEditor implements
 		TableCellEditor {
@@ -16,20 +17,21 @@ public class AmountCellEditor extends AbstractCellEditor implements
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -1136549965407374170L;
-	private ChemicalAmount amount = null;
-	private JTextField amountField = new JTextField();
+	private static final long	serialVersionUID	= -1136549965407374170L;
+	private ChemicalAmount		amount				= null;
+	private final JTextField	amountField			= new JTextField();
+
 	@Override
-	
 	public Object getCellEditorValue() {
-			String[] fields = amountField.getText().split(" ");
-			return ChemicalAmountFactory.getChemicalAmount(fields[0], fields[1]);
+		final String[] fields = amountField.getText().split(" ", 2);
+		return ChemicalAmountFactory.getChemicalAmount(fields[0], fields[1]);
 	}
 
 	@Override
-	public Component getTableCellEditorComponent(JTable table, Object value,
-			boolean isSelected, int row, int column) {
-		amount = (ChemicalAmount) value;
+	public Component getTableCellEditorComponent(final JTable table,
+			final Object value, final boolean isSelected, final int row,
+			final int column) {
+		amount = ((InventoryAmount) value).getAmount();
 		amountField.setText(amount.toString());
 		return amountField;
 	}

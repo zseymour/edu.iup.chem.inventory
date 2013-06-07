@@ -22,13 +22,11 @@
 			<attribute name="javadoc_location" value="file:/C:/Users/Zach/workspace/ChemInventory/lib/lucene/lib/docs/core/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/lucene/lib/analysis/common/lucene-analyzers-common-4.0.0.jar">
+	<classpathentry kind="lib" path="lib/lucene/lib/analysis/common/lucene-analyzers-common-4.0.0.jar" sourcepath="lib/lucene/src/analysis/common/src/java">
 		<attributes>
 			<attribute name="javadoc_location" value="file:/C:/Users/Zach/workspace/ChemInventory/lib/lucene/lib/docs/analyzers-common/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/cdk/cdk-1.4.15.jar" sourcepath="lib/cdk/src/main/org"/>
-	<classpathentry kind="lib" path="lib/batik-1.7/batik.jar"/>
 	<classpathentry kind="lib" path="lib/cdk/structure-cdk-0.1.2.jar" sourcepath="lib/cdk/structure/src">
 		<attributes>
 			<attribute name="javadoc_location" value="file:/C:/Users/Zach/workspace/ChemInventory/lib/cdk/structure/doc/"/>
@@ -110,5 +108,33 @@
 	<classpathentry kind="lib" path="lib/axis/bin/lib/xml-resolver-1.2.jar"/>
 	<classpathentry kind="lib" path="lib/axis/bin/lib/xmlbeans-2.3.0.jar"/>
 	<classpathentry kind="lib" path="lib/axis/bin/lib/XmlSchema-1.4.7.jar"/>
+	<classpathentry kind="lib" path="lib/lucene/lib/queryparser/lucene-queryparser-4.0.0.jar" sourcepath="lib/lucene/src/queryparser/src/java"/>
+	<classpathentry kind="lib" path="lib/guava/guava-13.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/jasper/iText-2.1.7.js1.jar"/>
+	<classpathentry kind="lib" path="lib/jasper/jasperreports-5.0.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="file:/C:/git/edu.iup.chem.inventory/ChemInventory/lib/jasper/docs/api/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/jasper/jasperreports-applet-5.0.0.jar"/>
+	<classpathentry kind="lib" path="lib/jasper/jasperreports-fonts-5.0.0.jar"/>
+	<classpathentry kind="lib" path="lib/jasper/jasperreports-javaflow-5.0.0.jar"/>
+	<classpathentry kind="lib" path="lib/jasper/commons-digester-2.1.jar"/>
+	<classpathentry kind="lib" path="lib/jasper/commons-beanutils-1.8.0.jar"/>
+	<classpathentry kind="lib" path="lib/jasper/commons-collections-2.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/jasper/groovy-all-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/jasper/poi-ooxml-3.7-20101029.jar"/>
+	<classpathentry kind="lib" path="lib/jasper/poi-ooxml-schemas-3.7-20101029.jar"/>
+	<classpathentry kind="lib" path="lib/cdk/cdk-git-20130211.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="file:/C:/git/edu.iup.chem.inventory/ChemInventory/lib/cdk/doc/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/jasper/commons-javaflow-20060411.jar"/>
+	<classpathentry kind="lib" path="lib/poi/poi-3.9-20121203.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="file:/C:/git/edu.iup.chem.inventory/ChemInventory/lib/poi/docs/apidocs/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

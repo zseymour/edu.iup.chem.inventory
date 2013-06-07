@@ -155,6 +155,10 @@ public abstract class WizardPage extends JPanel {
 		setDoubleBuffered(true);
 	}
 
+	public WizardContainer getContainer() {
+		return (WizardContainer) _controller;
+	}
+
 	/**
 	 * Gets a longer description of this WizardPage.
 	 * 

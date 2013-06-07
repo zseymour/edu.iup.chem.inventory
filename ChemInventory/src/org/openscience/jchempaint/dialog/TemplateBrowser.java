@@ -29,8 +29,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -42,7 +42,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import java.util.zip.ZipException;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -50,7 +49,6 @@ import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingConstants;
@@ -58,212 +56,296 @@ import javax.swing.SwingConstants;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IMolecule;
-import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.cdk.io.IChemObjectReader.Mode;
+import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.jchempaint.GT;
 import org.openscience.jchempaint.dialog.templates.DummyClass;
 
 /**
- * This class shows a list of templates. The one chosen by the user can queried 
- * with getChosenmolecule(). The templates are organized in tabs. The headers of 
- * the tabs are the names of all directories in TEMPLATES_PACKAGE. _ in 
- * directory name is replaced by a space. All files in 
- * theses directories named *.mol are read as MOL files and put as a template on 
- * the respective tab. The first line of the MOL file is used as name to 
- * display. If there is a *.png file in the same directy, it is used 
- * as icon. Do not put anything else in these directories. TEMPLATES_PACKAGE must 
- * contain a class called DummyClass for the directory being located. 
- * If wished, the tab can be added to the Templates menu with an action like:
+ * This class shows a list of templates. The one chosen by the user can queried
+ * with getChosenmolecule(). The templates are organized in tabs. The headers of
+ * the tabs are the names of all directories in TEMPLATES_PACKAGE. _ in
+ * directory name is replaced by a space. All files in theses directories named
+ * *.mol are read as MOL files and put as a template on the respective tab. The
+ * first line of the MOL file is used as name to display. If there is a *.png
+ * file in the same directy, it is used as icon. Do not put anything else in
+ * these directories. TEMPLATES_PACKAGE must contain a class called DummyClass
+ * for the directory being located. If wished, the tab can be added to the
+ * Templates menu with an action like:
  * menuitemnameAction=org.openscience.jchempaint.action.CopyPasteAction@pasteX
  * where X is the directory name.
  */
 public class TemplateBrowser extends JDialog implements ActionListener {
-    
-    private static final long serialVersionUID = -7684345027847830963L;
-    private JPanel myPanel;
-    private JButton yesButton;
-    private JTabbedPane tabbedPane;
-    private Map<JButton, IMolecule> mols = new HashMap<JButton, IMolecule>();
-    private IMolecule chosenmolecule;
-    public final static String TEMPLATES_PACKAGE = "org/openscience/jchempaint/dialog/templates";
 
-    /**
-     * The molecule chosen by the user.
-     * 
-     * @return The molecule, null if cancelled.
-     */
-    public IMolecule getChosenmolecule() {
-        return chosenmolecule;
-    }
+	private static final long	serialVersionUID	= -7684345027847830963L;
 
-    /**
-     * Constructor for TemplateBrowser.
-	 * @param tabToSelect a tab with that name will be shown at startup.
-     */
-    public TemplateBrowser(String tabToSelect) {
-        super((JFrame)null, GT._("Structure Templates"), true);
-        this.setName("templates");
-        myPanel = new JPanel();
-        getContentPane().add(myPanel);
-        myPanel.setLayout(new BorderLayout());
-        yesButton = new JButton(GT._("Cancel"));
-        yesButton.addActionListener(this);
-        JPanel bottomPanel =new JPanel();
-        bottomPanel.add(yesButton);
-        myPanel.add(bottomPanel, BorderLayout.SOUTH); 
-        tabbedPane = new JTabbedPane(JTabbedPane.LEFT, JTabbedPane.WRAP_TAB_LAYOUT);
-        Map<String,List<IMolecule>> entriesMol = new TreeMap<String,List<IMolecule>>(); 
-        Map<IMolecule, String> entriesMolName = new HashMap<IMolecule, String>();
-        Map<String, Icon> entriesIcon = new HashMap<String, Icon>();
-        
-        JPanel allPanel = new JPanel();
-        GridLayout allLayout = new GridLayout(0,6);
-        GridLayout experimentLayout = new GridLayout(0,6);
-        allPanel.setLayout(allLayout);
-        JScrollPane scrollPane = new JScrollPane(allPanel,
-            JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        tabbedPane.addTab(GT._("All"), scrollPane );
-        try{
-            createTemplatesMaps(entriesMol, entriesMolName, entriesIcon, true);
-            myPanel.add( tabbedPane, BorderLayout.CENTER );
-            Iterator<String> it = entriesMol.keySet().iterator();
-            int count=0;
-            while(it.hasNext()) {
-                String key=it.next();
-                JPanel panel = new JPanel();
-                panel.setLayout(experimentLayout);
-                for(int k=0;k<entriesMol.get(key).size();k++){
-                    IMolecule cdkmol = entriesMol.get(key).get(k);
-                    Icon icon = entriesIcon.get(entriesMolName.get(cdkmol));
-                    JButton button = new JButton();
-                    if(icon!=null)
-                        button.setIcon(icon);
-                    panel.add(button);
-                    button.setPreferredSize(new Dimension(100,120));
-                    button.setMaximumSize(new Dimension(100,120));
-                    button.addActionListener(this);
-                    button.setVerticalTextPosition(SwingConstants.BOTTOM);
-                    button.setHorizontalTextPosition(SwingConstants.CENTER);
-                    button.setText((String)cdkmol.getProperty(CDKConstants.TITLE));
-                    button.setToolTipText((String)cdkmol.getProperty(CDKConstants.TITLE));
-                    button.setFont(button.getFont().deriveFont(10f));
-                    button.setName((String)cdkmol.getProperty(CDKConstants.TITLE));
-                    mols.put(button, cdkmol);
-                    JButton allButton = new JButton();
-                    if(icon!=null)
-                        allButton.setIcon(icon);
-                    panel.add(button);
-                    allButton.setPreferredSize(new Dimension(100,120));
-                    allButton.setMaximumSize(new Dimension(100,120));
-                    allButton.addActionListener(this);
-                    allButton.setVerticalTextPosition(SwingConstants.BOTTOM);
-                    allButton.setHorizontalTextPosition(SwingConstants.CENTER);
-                    allButton.setText((String)cdkmol.getProperty(CDKConstants.TITLE));
-                    allButton.setToolTipText((String)cdkmol.getProperty(CDKConstants.TITLE));
-                    allButton.setFont(allButton.getFont().deriveFont(10f));
-                    mols.put(allButton, cdkmol);
-                    allPanel.add(allButton);
-                    scrollPane.setPreferredSize(new Dimension(allPanel.getPreferredSize().width
-                            +scrollPane.getVerticalScrollBar().getPreferredSize().width,360));
-                    scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-                    
-                }
-                tabbedPane.addTab(GT.getStringNoExtraction(key.replace('_', ' ')), panel );
-                if(tabToSelect.equals(key)){
-                    tabbedPane.setSelectedIndex(count+1);
-                }
-                count++;
-            }                
-            pack();
-            setVisible(true);
-        } catch (Exception e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        }
-    }
+	/**
+	 * Extracts templates from directories.
+	 * 
+	 * @param entriesMol
+	 *            A map of category names and structure.
+	 * @param entriesMolName
+	 *            A map of structures and names.
+	 * @param entriesIcon
+	 *            A map of structures and images.
+	 * @param withsubdirs
+	 *            true=all of the above will be filled, false=only names in
+	 *            entriesMol will be filled (values in entriesMol will be empty,
+	 *            other maps as well, these can be passed as null).
+	 * @throws Exception
+	 *             Problems reading directories.
+	 */
+	public static void createTemplatesMaps(
+			final Map<String, List<IAtomContainer>> entriesMol,
+			final Map<IAtomContainer, String> entriesMolName,
+			final Map<String, Icon> entriesIcon, final boolean withsubdirs)
+			throws Exception {
+		final DummyClass dummy = new DummyClass();
+		final URL loc = dummy.getClass().getProtectionDomain().getCodeSource()
+				.getLocation();
+		try {
+			// Create a URL that refers to a jar file on the net
+			final URL url = new URL("jar:" + loc.toURI() + "/");
+			// Get the jar file
+			final JarURLConnection conn = (JarURLConnection) url
+					.openConnection();
+			final JarFile jarfile = conn.getJarFile();
+			for (final Enumeration<JarEntry> e = jarfile.entries(); e
+					.hasMoreElements();) {
+				final JarEntry entry = e.nextElement();
+				if (entry.getName().indexOf(TEMPLATES_PACKAGE + "/") == 0) {
+					final String restname = entry.getName().substring(
+							new String(TEMPLATES_PACKAGE + "/").length());
+					if (restname.length() > 2) {
+						if (restname.indexOf("/") == restname.length() - 1) {
+							entriesMol.put(restname.substring(0,
+									restname.length() - 1),
+									new ArrayList<IAtomContainer>());
+						} else if (restname.indexOf("/") > -1 && withsubdirs) {
+							if (entry.getName().indexOf(".mol") > -1) {
+								final InputStream ins = dummy.getClass()
+										.getClassLoader()
+										.getResourceAsStream(entry.getName());
+								final MDLV2000Reader reader = new MDLV2000Reader(
+										ins, Mode.RELAXED);
+								final IAtomContainer cdkmol = reader
+										.read(DefaultChemObjectBuilder
+												.getInstance().newInstance(
+														IAtomContainer.class));
+								entriesMol.get(
+										restname.substring(0,
+												restname.indexOf("/"))).add(
+										cdkmol);
+								entriesMolName.put(
+										cdkmol,
+										entry.getName().substring(0,
+												entry.getName().length() - 4));
+							} else {
+								final Icon icon = new ImageIcon(new URL(
+										url.toString() + entry.getName()));
+								entriesIcon.put(
+										entry.getName().substring(0,
+												entry.getName().length() - 4),
+										icon);
+							}
+						}
+					}
+				}
+			}
+		} catch (final IOException ex) {
+			// This is a version we fall back to if no jar available. This
+			// should be in Eclipse only.
+			final File file = new File(new File(dummy.getClass()
+					.getProtectionDomain().getCodeSource().getLocation()
+					.toURI()).getAbsolutePath()
+					+ File.separator
+					+ TEMPLATES_PACKAGE.replace('/', File.separatorChar));
+			for (int i = 0; i < file.listFiles().length; i++) {
+				if (file.listFiles()[i].isDirectory()) {
+					final File dir = file.listFiles()[i];
+					if (!dir.getName().startsWith(".")) {
+						entriesMol.put(dir.getName(),
+								new ArrayList<IAtomContainer>());
+						if (withsubdirs) {
+							for (int k = 0; k < dir.list().length; k++) {
+								if (dir.listFiles()[k].getName()
+										.indexOf(".mol") > -1) {
+									final MDLV2000Reader reader = new MDLV2000Reader(
+											new FileInputStream(
+													dir.listFiles()[k]),
+											Mode.RELAXED);
+									final IAtomContainer cdkmol = reader
+											.read(DefaultChemObjectBuilder
+													.getInstance()
+													.newInstance(
+															IAtomContainer.class));
+									entriesMol.get(dir.getName()).add(cdkmol);
+									entriesMolName
+											.put(cdkmol,
+													dir.listFiles()[k]
+															.getName()
+															.substring(
+																	0,
+																	dir.listFiles()[k]
+																			.getName()
+																			.length() - 4));
+								} else {
 
-    /* (non-Javadoc)
-     * @see java.awt.event.ActionListener#actionPerformed(java.awt.event.ActionEvent)
-     */
-    public void actionPerformed(ActionEvent e) {
-        if(e.getSource()!=yesButton){
-            chosenmolecule = mols.get(e.getSource());
-            chosenmolecule.removeProperty(CDKConstants.TITLE);
-        }
-        this.setVisible(false);        
-    }
+									final Icon icon = new ImageIcon(
+											dir.listFiles()[k]
+													.getAbsolutePath());
+									if (dir.listFiles()[k].getName()
+											.toLowerCase().endsWith("png")) {
+										entriesIcon
+												.put(dir.listFiles()[k]
+														.getName()
+														.substring(
+																0,
+																dir.listFiles()[k]
+																		.getName()
+																		.length() - 4),
+														icon);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 
+	}
 
-    /**
-     * Extracts templates from directories.
-     * 
-     * @param entriesMol      A map of category names and structure.
-     * @param entriesMolName  A map of structures and names.
-     * @param entriesIcon     A map of structures and images.
-     * @param withsubdirs     true=all of the above will be filled, false=only names in entriesMol will be filled (values in entriesMol will be empty, other maps as well, these can be passed as null).
-     * @throws Exception      Problems reading directories.
-     */
-    public static void createTemplatesMaps(Map<String, List<IMolecule>> entriesMol,
-            Map<IMolecule, String> entriesMolName, Map<String, Icon> entriesIcon, boolean withsubdirs) throws Exception{
-        DummyClass dummy = new DummyClass();
-        URL loc = dummy.getClass().getProtectionDomain().getCodeSource().getLocation();
-            try{
-                // Create a URL that refers to a jar file on the net
-                URL url = new URL("jar:"+loc.toURI()+"!/");
-                // Get the jar file
-                JarURLConnection conn = (JarURLConnection)url.openConnection();
-                JarFile jarfile = conn.getJarFile();
-                for (Enumeration<JarEntry> e = jarfile.entries() ; e.hasMoreElements() ;) {
-                    JarEntry entry = e.nextElement();
-                    if(entry.getName().indexOf(TEMPLATES_PACKAGE+"/")==0){
-                        String restname = entry.getName().substring(new String(TEMPLATES_PACKAGE+"/").length());
-                        if(restname.length()>2){
-                            if(restname.indexOf("/")==restname.length()-1){
-                                entriesMol.put(restname.substring(0,restname.length()-1), new ArrayList<IMolecule>());
-                            }else if(restname.indexOf("/")>-1 && withsubdirs){
-                                if(entry.getName().indexOf(".mol")>-1){
-                                    InputStream ins = dummy.getClass().getClassLoader().getResourceAsStream(entry.getName());
-                                    MDLV2000Reader reader = new MDLV2000Reader(ins, Mode.RELAXED);
-                                    IMolecule cdkmol = (IMolecule)reader.read(DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class));
-                                    entriesMol.get(restname.substring(0,restname.indexOf("/"))).add(cdkmol);
-                                    entriesMolName.put(cdkmol,entry.getName().substring(0,entry.getName().length()-4));
-                                }else{
-                                    Icon icon = new ImageIcon(new URL(url.toString()+entry.getName()));
-                                    entriesIcon.put(entry.getName().substring(0,entry.getName().length()-4),icon);
-                                }
-                            }
-                        }
-                    }
-                }
-            }catch(IOException ex){
-                //This is a version we fall back to if no jar available. This should be in Eclipse only.
-                File file = new File(new File(dummy.getClass().getProtectionDomain().getCodeSource().getLocation().toURI()).getAbsolutePath()+File.separator+TEMPLATES_PACKAGE.replace('/', File.separatorChar));
-                for (int i=0;i<file.listFiles().length ; i++) {
-                    if(file.listFiles()[i].isDirectory()){
-                        File dir = file.listFiles()[i];
-                        if(!dir.getName().startsWith(".")) { 
-                            entriesMol.put(dir.getName(), new ArrayList<IMolecule>());
-                            if(withsubdirs){
-                                for(int k=0;k<dir.list().length;k++){
-                                    if(dir.listFiles()[k].getName().indexOf(".mol")>-1){
-                                        MDLV2000Reader reader = new MDLV2000Reader(new FileInputStream(dir.listFiles()[k]), Mode.RELAXED);
-                                        IMolecule cdkmol = (IMolecule)reader.read(DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class));
-                                        entriesMol.get(dir.getName()).add(cdkmol);
-                                        entriesMolName.put(cdkmol,dir.listFiles()[k].getName().substring(0,dir.listFiles()[k].getName().length()-4));
-                                    }else{
-    
-                                        Icon icon = new ImageIcon(dir.listFiles()[k].getAbsolutePath());
-                                        if ( dir.listFiles()[k].getName().toLowerCase().endsWith("png")) {
-                                            entriesIcon.put(dir.listFiles()[k].getName().substring(0,dir.listFiles()[k].getName().length()-4),icon);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }                
-            }
-        
-    }
+	private final JPanel						myPanel;
+	private final JButton						yesButton;
+	private final JTabbedPane					tabbedPane;
+	private final Map<JButton, IAtomContainer>	mols				= new HashMap<JButton, IAtomContainer>();
+	private IAtomContainer						chosenmolecule;
+
+	public final static String					TEMPLATES_PACKAGE	= "org/openscience/jchempaint/dialog/templates";
+
+	/**
+	 * Constructor for TemplateBrowser.
+	 * 
+	 * @param tabToSelect
+	 *            a tab with that name will be shown at startup.
+	 */
+	public TemplateBrowser(final String tabToSelect) {
+		super((JFrame) null, GT._("Structure Templates"), true);
+		setName("templates");
+		myPanel = new JPanel();
+		getContentPane().add(myPanel);
+		myPanel.setLayout(new BorderLayout());
+		yesButton = new JButton(GT._("Cancel"));
+		yesButton.addActionListener(this);
+		final JPanel bottomPanel = new JPanel();
+		bottomPanel.add(yesButton);
+		myPanel.add(bottomPanel, BorderLayout.SOUTH);
+		tabbedPane = new JTabbedPane(JTabbedPane.LEFT,
+				JTabbedPane.WRAP_TAB_LAYOUT);
+		final Map<String, List<IAtomContainer>> entriesMol = new TreeMap<String, List<IAtomContainer>>();
+		final Map<IAtomContainer, String> entriesMolName = new HashMap<IAtomContainer, String>();
+		final Map<String, Icon> entriesIcon = new HashMap<String, Icon>();
+
+		final JPanel allPanel = new JPanel();
+		final GridLayout allLayout = new GridLayout(0, 6);
+		final GridLayout experimentLayout = new GridLayout(0, 6);
+		allPanel.setLayout(allLayout);
+		final JScrollPane scrollPane = new JScrollPane(allPanel,
+				JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		tabbedPane.addTab(GT._("All"), scrollPane);
+		try {
+			createTemplatesMaps(entriesMol, entriesMolName, entriesIcon, true);
+			myPanel.add(tabbedPane, BorderLayout.CENTER);
+			final Iterator<String> it = entriesMol.keySet().iterator();
+			int count = 0;
+			while (it.hasNext()) {
+				final String key = it.next();
+				final JPanel panel = new JPanel();
+				panel.setLayout(experimentLayout);
+				for (int k = 0; k < entriesMol.get(key).size(); k++) {
+					final IAtomContainer cdkmol = entriesMol.get(key).get(k);
+					final Icon icon = entriesIcon.get(entriesMolName
+							.get(cdkmol));
+					final JButton button = new JButton();
+					if (icon != null) {
+						button.setIcon(icon);
+					}
+					panel.add(button);
+					button.setPreferredSize(new Dimension(100, 120));
+					button.setMaximumSize(new Dimension(100, 120));
+					button.addActionListener(this);
+					button.setVerticalTextPosition(SwingConstants.BOTTOM);
+					button.setHorizontalTextPosition(SwingConstants.CENTER);
+					button.setText((String) cdkmol
+							.getProperty(CDKConstants.TITLE));
+					button.setToolTipText((String) cdkmol
+							.getProperty(CDKConstants.TITLE));
+					button.setFont(button.getFont().deriveFont(10f));
+					button.setName((String) cdkmol
+							.getProperty(CDKConstants.TITLE));
+					mols.put(button, cdkmol);
+					final JButton allButton = new JButton();
+					if (icon != null) {
+						allButton.setIcon(icon);
+					}
+					panel.add(button);
+					allButton.setPreferredSize(new Dimension(100, 120));
+					allButton.setMaximumSize(new Dimension(100, 120));
+					allButton.addActionListener(this);
+					allButton.setVerticalTextPosition(SwingConstants.BOTTOM);
+					allButton.setHorizontalTextPosition(SwingConstants.CENTER);
+					allButton.setText((String) cdkmol
+							.getProperty(CDKConstants.TITLE));
+					allButton.setToolTipText((String) cdkmol
+							.getProperty(CDKConstants.TITLE));
+					allButton.setFont(allButton.getFont().deriveFont(10f));
+					mols.put(allButton, cdkmol);
+					allPanel.add(allButton);
+					scrollPane.setPreferredSize(new Dimension(allPanel
+							.getPreferredSize().width
+							+ scrollPane.getVerticalScrollBar()
+									.getPreferredSize().width, 360));
+					scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+
+				}
+				tabbedPane.addTab(
+						GT.getStringNoExtraction(key.replace('_', ' ')), panel);
+				if (tabToSelect.equals(key)) {
+					tabbedPane.setSelectedIndex(count + 1);
+				}
+				count++;
+			}
+			pack();
+			setVisible(true);
+		} catch (final Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * java.awt.event.ActionListener#actionPerformed(java.awt.event.ActionEvent)
+	 */
+	@Override
+	public void actionPerformed(final ActionEvent e) {
+		if (e.getSource() != yesButton) {
+			chosenmolecule = mols.get(e.getSource());
+			chosenmolecule.removeProperty(CDKConstants.TITLE);
+		}
+		setVisible(false);
+	}
+
+	/**
+	 * The molecule chosen by the user.
+	 * 
+	 * @return The molecule, null if cancelled.
+	 */
+	public IAtomContainer getChosenmolecule() {
+		return chosenmolecule;
+	}
 }
