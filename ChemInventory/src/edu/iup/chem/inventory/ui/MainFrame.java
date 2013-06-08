@@ -518,9 +518,10 @@ public class MainFrame extends JXFrame {
 	}
 
 	private void buildBasicSearchPane() {
-		final ChemicalViewSplitPane chemSearch = new ChemicalViewSplitPane();
-		add(chemSearch);
-		chemSearch.start(null);
+		search = new ChemicalViewSplitPane();
+		search.setPreferredSize(new Dimension(1200, 700));
+		add(search, BorderLayout.CENTER);
+		search.start(null);
 	}
 
 	private void buildSearchBar(final JToolBar searchBar) {
