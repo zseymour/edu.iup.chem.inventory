@@ -24,18 +24,19 @@ public class AccessDao {
 	public static void grantUserAccess(final UserRecord rec,
 			final List<RoomRecord> rooms) {
 		final String role = rec.getRoleName();
-		List<String> roomsToAdd = new ArrayList<>();
+		ArrayList<String> roomsToAdd = new ArrayList<>();
 
 		switch (role) {
 			case Constants.ADMIN_ROLE:
 			case Constants.SITE_ADMIN_ROLE:
 			case Constants.DATA_ENTRY_ROLE:
-				roomsToAdd = RoomDao.getAllRoomNames();
+				roomsToAdd = new ArrayList<>(RoomDao.getAllRoomNames());
 				break;
-			case Constants.RESEARCHER_ROLE:
 			case Constants.FACULTY_ROLE:
-				roomsToAdd = Arrays.asList("Weyandt 146",
-						"Weyandt Main Stockroom");
+				roomsToAdd = new ArrayList<>(Arrays.asList("Weyandt 146",
+						"Weyandt 126A"));
+				//$FALL-THROUGH$
+			case Constants.RESEARCHER_ROLE:
 				for (final RoomRecord room : rooms) {
 					roomsToAdd.add(room.getRoom());
 				}
@@ -44,7 +45,7 @@ public class AccessDao {
 				break;
 		}
 
-		LOG.debug("Adding access for " + rec.getName() + " to "
+		LOG.info("Adding access for " + rec.getName() + " to "
 				+ roomsToAdd.size() + " rooms: " + roomsToAdd.toString());
 		try (Connection conn = ConnectionPool.getConnection()) {
 			final InventoryFactory create = new InventoryFactory(conn);
