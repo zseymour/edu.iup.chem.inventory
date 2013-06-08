@@ -192,7 +192,12 @@ public class ChemicalWebSearch {
 	 * @return
 	 */
 	public static ChemicalToxic amountToToxicity(final ChemicalMass ld50PerKilo) {
-		final ArrayList<ChemicalMass> levels = new ArrayList<>(Constants.LD50_LEVELS);
+		if (ld50PerKilo.getQuantity() == 0.0) {
+			return ChemicalToxic.Unknown;
+		}
+
+		final ArrayList<ChemicalMass> levels = new ArrayList<>(
+				Constants.LD50_LEVELS);
 		levels.add(ld50PerKilo);
 		Collections.sort(levels, new ChemicalAmountComparator());
 
