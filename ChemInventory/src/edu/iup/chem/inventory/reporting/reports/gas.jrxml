@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="waste" language="groovy" pageWidth="612" pageHeight="792" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="eec5af5e-9143-4810-adaa-7e35bbc407e2">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<queryString>
+		<![CDATA[SELECT * FROM chemical AS c JOIN location AS l ON c.cas = l.cas WHERE l.type = 'G']]>
+	</queryString>
+	<field name="cas" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="storage_class" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="toxic" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="cold" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="flamm" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="carc" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="nfpa_h" class="java.lang.Integer">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="nfpa_f" class="java.lang.Integer">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="nfpa_r" class="java.lang.Integer">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="nfpa_s" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="smiles" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="name" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="formula" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="csid" class="java.lang.String">
+		<fieldDescription><![CDATA[ID for ChemSpider searches]]></fieldDescription>
+	</field>
+	<field name="inchi" class="java.lang.String">
+		<fieldDescription><![CDATA[International Chemical Identifier (unique)]]></fieldDescription>
+	</field>
+	<field name="melting_point" class="java.lang.Double">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="boiling_point" class="java.lang.Double">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="density" class="java.lang.Double">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="density_units" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="room" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="shelf" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="type" class="java.lang.String">
+		<fieldDescription><![CDATA[W for Waste & G for Gas]]></fieldDescription>
+	</field>
+	<field name="bottle_no" class="java.lang.Integer">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="instructor" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="amount" class="java.lang.Double">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="units" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="arrival" class="java.sql.Date">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="expiration" class="java.sql.Date">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="part_no" class="java.lang.Integer">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="supplier" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="active" class="java.lang.Boolean">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="description" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="47" splitType="Stretch">
+			<staticText>
+				<reportElement uuid="96f0db26-8234-40cc-896b-1a3f827f823d" mode="Opaque" x="0" y="0" width="572" height="47" forecolor="#FFFFFF" backcolor="#9E1B32"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="36"/>
+				</textElement>
+				<text><![CDATA[GAS CANISTER REPORT]]></text>
+			</staticText>
+		</band>
+	</title>
+	<pageHeader>
+		<band height="35" splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band height="20" splitType="Stretch">
+			<staticText>
+				<reportElement uuid="2d2205de-3771-4bd2-8d3c-b9f5106b4bca" x="0" y="0" width="100" height="20"/>
+				<textElement>
+					<font size="14"/>
+				</textElement>
+				<text><![CDATA[Bottle Number]]></text>
+			</staticText>
+			<staticText>
+				<reportElement uuid="a8a19a8d-ecea-4e73-ae4b-eed6fc4e1234" x="142" y="0" width="100" height="20"/>
+				<textElement>
+					<font size="14"/>
+				</textElement>
+				<text><![CDATA[Location]]></text>
+			</staticText>
+			<staticText>
+				<reportElement uuid="9af9f520-090f-4c1b-989a-480b43670823" x="330" y="0" width="242" height="20"/>
+				<textElement>
+					<font size="14"/>
+				</textElement>
+				<text><![CDATA[Contents]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="125" splitType="Stretch">
+			<line>
+				<reportElement uuid="35451eb9-e392-4116-b598-8c4ce9546355" x="0" y="0" width="572" height="1"/>
+			</line>
+			<textField>
+				<reportElement uuid="b1218f07-4564-4335-8b78-6d964b4f703b" x="0" y="1" width="100" height="20"/>
+				<textElement verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{type} + $F{bottle_no}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement uuid="65087b81-b9d6-4fbe-9e57-0c9c00e22516" x="142" y="1" width="150" height="20"/>
+				<textElement verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{room} + " " + $F{shelf}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement uuid="b37210fe-4425-4fcd-bc98-eee18fd0dac1" x="330" y="1" width="242" height="46"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{name} + " (" + $F{amount} + " " +$F{units} +")"]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement uuid="143f59de-4a8d-43eb-b5ef-34a5026b591f" x="0" y="47" width="572" height="1"/>
+			</line>
+		</band>
+	</detail>
+	<columnFooter>
+		<band height="45" splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band height="54" splitType="Stretch">
+			<textField>
+				<reportElement uuid="32abd2b9-fb8d-4c9e-8fc3-b99d2cdc97ff" x="452" y="34" width="80" height="20"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA["Page "+$V{PAGE_NUMBER}+" of"]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement uuid="2f973f07-4d09-44ad-aa4b-ef371ed1625b" x="532" y="34" width="40" height="20"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<textField pattern="dd/MM/yyyy h.mm a">
+				<reportElement uuid="856b5f42-74a4-40fc-8072-cdd43cb61123" x="0" y="34" width="100" height="20"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+	<summary>
+		<band height="42" splitType="Stretch"/>
+	</summary>
+</jasperReport>

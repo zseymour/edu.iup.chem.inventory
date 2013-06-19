@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="shelf_classes" language="groovy" pageWidth="612" pageHeight="792" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="8d660abe-5a24-47a5-a369-dbb54ee789ee">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="room" class="java.lang.String"/>
+	<parameter name="subreport" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="subreport2" class="net.sf.jasperreports.engine.JasperReport"/>
+	<queryString language="SQL">
+		<![CDATA[SELECT DISTINCT
+     location.`shelf`
+FROM
+     `location` location
+WHERE
+     room = $P{room}]]>
+	</queryString>
+	<field name="shelf" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<group name="shelf">
+		<groupExpression><![CDATA[$F{shelf}]]></groupExpression>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="79" splitType="Stretch">
+			<staticText>
+				<reportElement uuid="809e3ce1-5663-40a0-b28e-739394e21367" mode="Opaque" x="0" y="0" width="572" height="51" forecolor="#FFFFFF" backcolor="#9E1B32"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="36"/>
+				</textElement>
+				<text><![CDATA[STORAGE CLASS BY SHELF]]></text>
+			</staticText>
+			<textField>
+				<reportElement uuid="11c4eccf-6715-4a32-816d-556592f10004" mode="Opaque" x="0" y="51" width="572" height="28" forecolor="#FFFFFF" backcolor="#9E1B32"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="12"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{room}]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+	<columnHeader>
+		<band height="46" splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band height="186" splitType="Stretch">
+			<subreport>
+				<reportElement uuid="e063cd24-b4a8-4217-9f3a-62df6cc7a6f6" x="0" y="34" width="572" height="148"/>
+				<subreportParameter name="shelf">
+					<subreportParameterExpression><![CDATA[$F{shelf}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="room">
+					<subreportParameterExpression><![CDATA[$P{room}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="subreport2">
+					<subreportParameterExpression><![CDATA[$P{subreport2}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{subreport}]]></subreportExpression>
+			</subreport>
+			<textField>
+				<reportElement uuid="003d1783-ad0b-44cd-bd12-ff3991fdc458" mode="Opaque" x="0" y="0" width="572" height="34" forecolor="#FFFFFF" backcolor="#9E1B32"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="14"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Shelf " + $F{shelf}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="54" splitType="Stretch">
+			<textField>
+				<reportElement uuid="32abd2b9-fb8d-4c9e-8fc3-b99d2cdc97ff" x="452" y="34" width="80" height="20"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA["Page "+$V{PAGE_NUMBER}+" of"]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement uuid="2f973f07-4d09-44ad-aa4b-ef371ed1625b" x="532" y="34" width="40" height="20"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<textField pattern="dd/MM/yyyy h.mm a">
+				<reportElement uuid="856b5f42-74a4-40fc-8072-cdd43cb61123" x="0" y="34" width="100" height="20"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+</jasperReport>

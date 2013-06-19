@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="shelf_classes_subreport1" language="groovy" pageWidth="752" pageHeight="572" orientation="Landscape" columnWidth="752" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="d6415325-0617-437b-808f-c02d050b6580">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="shelf" class="java.lang.String"/>
+	<parameter name="room" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["C:\\git\\edu.iup.chem.inventory\\ChemInventory\\src\\edu\\iup\\chem\\inventory\\reporting\\reports\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="subreport2" class="net.sf.jasperreports.engine.JasperReport"/>
+	<queryString language="SQL">
+		<![CDATA[SELECT c.storage_class FROM chemical AS c JOIN location AS l ON c.cas = l.cas WHERE l.shelf = $P{shelf} and l.room = $P{room} GROUP BY c.storage_class, l.shelf]]>
+	</queryString>
+	<field name="storage_class" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<group name="storage_class">
+		<groupExpression><![CDATA[$F{storage_class}]]></groupExpression>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<columnHeader>
+		<band height="27">
+			<textField>
+				<reportElement uuid="bc0e5da9-22d1-442f-8307-5d8c81136f23" x="37" y="0" width="680" height="27"/>
+				<textElement verticalAlignment="Middle">
+					<font size="12"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{storage_class}]]></textFieldExpression>
+			</textField>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="101" splitType="Stretch">
+			<subreport>
+				<reportElement uuid="8a124009-45d7-4c52-8583-8f0faf791a7a" x="37" y="0" width="680" height="100"/>
+				<subreportParameter name="shelf">
+					<subreportParameterExpression><![CDATA[$P{shelf}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="room">
+					<subreportParameterExpression><![CDATA[$P{room}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="class">
+					<subreportParameterExpression><![CDATA[$F{storage_class}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{subreport2}]]></subreportExpression>
+			</subreport>
+		</band>
+	</detail>
+</jasperReport>

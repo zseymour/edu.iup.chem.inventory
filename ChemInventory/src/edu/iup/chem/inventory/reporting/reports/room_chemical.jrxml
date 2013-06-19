@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="room_chemical" language="groovy" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="01038a6f-e9cb-411d-878d-21f63ca6eb5d">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="room" class="java.lang.String"/>
+	<queryString language="SQL">
+		<![CDATA[SELECT * FROM chemical JOIN location ON chemical.cid = location.cid WHERE location.room = $P{room}]]>
+	</queryString>
+	<field name="cas" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="name" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="shelf" class="java.lang.String">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="bottle_no" class="java.lang.Integer">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<group name="shelf">
+		<groupExpression><![CDATA[$F{shelf}]]></groupExpression>
+	</group>
+	<group name="cas">
+		<groupExpression><![CDATA[$F{cas}]]></groupExpression>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="79" splitType="Stretch">
+			<textField>
+				<reportElement uuid="51b588e1-b590-4821-b9a7-4bd43f0cd67e" x="0" y="0" width="555" height="79"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="24"/>
+				</textElement>
+				<textFieldExpression><![CDATA["List of Chemicals in " + $P{room}]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+	<columnHeader>
+		<band height="36" splitType="Stretch">
+			<staticText>
+				<reportElement uuid="f3500093-5869-45c3-ad31-c6ac545abcaf" x="100" y="0" width="100" height="20"/>
+				<textElement/>
+				<text><![CDATA[CAS #]]></text>
+			</staticText>
+			<staticText>
+				<reportElement uuid="a38f6ff7-0c08-47db-9c50-8ca197a7c4f0" x="0" y="0" width="100" height="20"/>
+				<textElement/>
+				<text><![CDATA[Bottle #]]></text>
+			</staticText>
+			<staticText>
+				<reportElement uuid="9cee1aa4-35e0-4cfa-9b64-cc85c5a104b0" x="200" y="0" width="255" height="20"/>
+				<textElement/>
+				<text><![CDATA[Chemical Name]]></text>
+			</staticText>
+			<staticText>
+				<reportElement uuid="316dcfc2-863c-40e1-96b1-7d03c3a5c2af" x="455" y="0" width="100" height="20"/>
+				<textElement/>
+				<text><![CDATA[Shelf]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="24" splitType="Stretch">
+			<textField>
+				<reportElement uuid="8a5e579f-7cf7-4f6c-8568-64be0176b37b" x="100" y="0" width="100" height="20"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[$F{cas}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement uuid="0a704b8c-b037-42cb-9a9e-26b3c928e056" x="0" y="0" width="100" height="20"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[$F{bottle_no}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement uuid="915332ef-6e44-403b-b549-5717fdeae6b0" x="200" y="0" width="255" height="20"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[$F{name}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement uuid="b0297754-b21c-4d35-82f3-d9b4f3671e22" x="455" y="0" width="100" height="20"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[$F{shelf}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="54" splitType="Stretch">
+			<textField>
+				<reportElement uuid="708696cc-3f17-4135-8b00-b430f853e57f" x="219" y="34" width="80" height="20"/>
+				<textElement/>
+				<textFieldExpression><![CDATA["Page "+$V{PAGE_NUMBER}+" of"]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement uuid="c033092a-dfae-484d-b8fc-fb11912bed7a" x="299" y="34" width="40" height="20"/>
+				<textElement/>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+</jasperReport>
